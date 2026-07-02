@@ -73,7 +73,7 @@ export default function Wheel({
   };
 
   const fontSize =
-    n <= 4 ? 24 : n <= 6 ? 21 : n <= 8 ? 18 : n <= 12 ? 15 : 12;
+    n <= 4 ? 30 : n <= 6 ? 26 : n <= 8 ? 23 : n <= 12 ? 19 : 15;
 
   return (
     <div className="flex flex-col items-center gap-6">

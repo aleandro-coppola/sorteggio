@@ -114,6 +114,11 @@
   }
 }
 
+html {
+  /* Base leggermente più grande del default: si legge meglio al sole e dopo qualche giro. */
+  font-size: 17.5px;
+}
+
 body {
   background-color: var(--color-abisso);
   color: var(--color-etichetta);
