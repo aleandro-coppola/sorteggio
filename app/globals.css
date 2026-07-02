@@ -1,0 +1,162 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Palette Assenzio ── */
+  --color-abisso: #06110b; /* fondo bottiglia, quasi nero */
+  --color-bottiglia: #0d2417; /* vetro scuro */
+  --color-vetro: #143523; /* vetro medio */
+  --color-smeraldo: #1e6b47; /* verde smeraldo */
+  --color-smeraldo-chiaro: #2e8f5f;
+  --color-assenzio: #a8e05f; /* verde assenzio brillante */
+  --color-assenzio-pallido: #d4f59a;
+  --color-fata: #c6f16d; /* la fata verde */
+  --color-ottone: #c9a227; /* ottone/oro vintage */
+  --color-ottone-chiaro: #e5c76b;
+  --color-etichetta: #f2ead3; /* crema etichetta */
+  --color-etichetta-scura: #d9cba6;
+
+  --font-titolo: "Cinzel Decorative", "Cinzel", serif;
+  --font-corpo: "Cormorant Garamond", Georgia, serif;
+
+  --animate-fairy-fly: fairy-fly 5s ease-in-out forwards;
+  --animate-float: float 4s ease-in-out infinite;
+  --animate-glow-pulse: glow-pulse 2.5s ease-in-out infinite;
+  --animate-pop-in: pop-in 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) forwards;
+  --animate-shake: shake 0.5s ease-in-out;
+  --animate-drip: drip 3s ease-in infinite;
+}
+
+@keyframes fairy-fly {
+  0% {
+    transform: translate(-10vw, 70vh) rotate(-10deg) scale(0.7);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  30% {
+    transform: translate(25vw, 30vh) rotate(15deg) scale(1);
+  }
+  55% {
+    transform: translate(55vw, 55vh) rotate(-15deg) scale(1.15);
+  }
+  80% {
+    transform: translate(80vw, 20vh) rotate(10deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(110vw, 5vh) rotate(20deg) scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 6px rgba(168, 224, 95, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 22px rgba(168, 224, 95, 0.95));
+  }
+}
+
+@keyframes pop-in {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8px) rotate(-2deg);
+  }
+  40% {
+    transform: translateX(8px) rotate(2deg);
+  }
+  60% {
+    transform: translateX(-6px) rotate(-1deg);
+  }
+  80% {
+    transform: translateX(6px) rotate(1deg);
+  }
+}
+
+@keyframes drip {
+  0% {
+    transform: translateY(-4px) scaleY(0.6);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(28px) scaleY(1.2);
+    opacity: 0;
+  }
+}
+
+body {
+  background-color: var(--color-abisso);
+  color: var(--color-etichetta);
+  font-family: var(--font-corpo);
+  background-image:
+    radial-gradient(
+      ellipse 80% 60% at 50% -10%,
+      rgba(30, 107, 71, 0.35),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 60% 50% at 50% 110%,
+      rgba(168, 224, 95, 0.08),
+      transparent 70%
+    );
+  min-height: 100vh;
+}
+
+/* Cornice art-nouveau da etichetta di bottiglia */
+.etichetta {
+  position: relative;
+  background:
+    linear-gradient(160deg, rgba(20, 53, 35, 0.85), rgba(13, 36, 23, 0.95));
+  border: 1px solid rgba(201, 162, 39, 0.55);
+  box-shadow:
+    inset 0 0 0 4px rgba(6, 17, 11, 0.6),
+    inset 0 0 0 5px rgba(201, 162, 39, 0.35),
+    0 8px 40px rgba(0, 0, 0, 0.55);
+}
+
+.testo-oro {
+  background: linear-gradient(180deg, #e5c76b 0%, #c9a227 55%, #8a6d14 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.divisorio-oro {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(201, 162, 39, 0.8),
+    transparent
+  );
+}
