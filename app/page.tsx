@@ -203,7 +203,7 @@ export default function Home() {
           >
             <span className="block text-2xl">{m.icon}</span>
             <span
-              className={`mt-1 block font-[family-name:var(--font-titolo)] text-[11px] tracking-wider ${
+              className={`mt-1 block font-[family-name:var(--font-titolo)] text-[13px] tracking-wider ${
                 mode === m.id ? "text-assenzio-pallido" : "text-etichetta-scura"
               }`}
             >
