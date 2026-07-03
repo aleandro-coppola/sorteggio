@@ -3,9 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Counts,
-  DRINK_MAP,
-  DRINKS,
-  DrinkKey,
   formatData,
   formatOra,
   isEroe,
@@ -16,10 +13,27 @@ import {
   saveSerate,
   Serata,
   totalePlayer,
+  uaPlayer,
 } from "@/lib/bar";
+import {
+  CATALOGO,
+  Categoria,
+  CATEGORIE,
+  Drink,
+  drinkById,
+  uaById,
+} from "@/lib/drinks";
 import { playCheers, playUndo } from "@/lib/sound";
 
 const MEDAGLIE = ["👑", "🥈", "🥉"];
+const fmtUA = (n: number) => n.toFixed(1);
+
+// Nome + emoji di un drink dal suo id, con fallback se non è in catalogo.
+function drinkInfo(id: string): { nome: string; emoji: string } {
+  const d = drinkById(id);
+  if (d) return { nome: d.nome, emoji: d.emoji };
+  return { nome: id, emoji: "🥤" };
+}
 
 export default function Contabar({
   players,
@@ -32,9 +46,12 @@ export default function Contabar({
   const [currentId, setCurrentId] = useState<string>("");
   const [tab, setTab] = useState<"conta" | "stat" | "storico">("conta");
   const [statScope, setStatScope] = useState<"serata" | "tutte">("serata");
+  const [picker, setPicker] = useState<string | null>(null); // giocatore che aggiunge
+  const [search, setSearch] = useState("");
+  const [catFilter, setCatFilter] = useState<Categoria | "tutte">("tutte");
+  const searchRef = useRef<HTMLInputElement>(null);
   const loaded = useRef(false);
 
-  // Carica le serate salvate (o creane una nuova al primo avvio).
   useEffect(() => {
     const saved = loadSerate();
     if (saved.length > 0) {
@@ -52,27 +69,30 @@ export default function Contabar({
     if (loaded.current) saveSerate(serate);
   }, [serate]);
 
+  useEffect(() => {
+    if (picker) setTimeout(() => searchRef.current?.focus(), 50);
+  }, [picker]);
+
   const currentIdx = serate.findIndex((s) => s.id === currentId);
   const current = serate[currentIdx];
 
-  const modifica = (nome: string, key: DrinkKey, delta: number) => {
+  const modifica = (nome: string, id: string, delta: number) => {
     setSerate((prev) =>
       prev.map((s) => {
         if (s.id !== currentId) return s;
         const pc = { ...(s.counts[nome] ?? {}) };
-        const cur = pc[key] ?? 0;
+        const cur = pc[id] ?? 0;
         const val = Math.max(0, cur + delta);
-        if (val === cur) return s; // nessun cambiamento reale
-        if (val === 0) delete pc[key];
-        else pc[key] = val;
+        if (val === cur) return s;
+        if (val === 0) delete pc[id];
+        else pc[id] = val;
         const counts: Counts = { ...s.counts, [nome]: pc };
         const log: LogEvent[] = s.log ? [...s.log] : [];
         if (delta > 0) {
-          log.push({ t: new Date().toISOString(), nome, drink: key });
+          log.push({ t: new Date().toISOString(), nome, drink: id });
         } else {
-          // togli l'ultima bevuta corrispondente dal registro
           for (let i = log.length - 1; i >= 0; i--) {
-            if (log[i].nome === nome && log[i].drink === key) {
+            if (log[i].nome === nome && log[i].drink === id) {
               log.splice(i, 1);
               break;
             }
@@ -120,48 +140,77 @@ export default function Contabar({
     });
   };
 
-  // ── Statistiche ──
+  // ── Statistiche serata corrente (per UNITÀ ALCOLICHE) ──
   const statSerata = useMemo(() => {
     if (!current) return null;
     const righe = players
-      .map((nome) => ({ nome, tot: totalePlayer(current.counts[nome]) }))
-      .sort((a, b) => b.tot - a.tot);
-    const totale = righe.reduce((a, r) => a + r.tot, 0);
-    const perTipo = DRINKS.map((d) => ({
-      ...d,
-      tot: players.reduce((a, n) => a + (current.counts[n]?.[d.key] ?? 0), 0),
-    })).sort((a, b) => b.tot - a.tot);
-    const gettonato = perTipo[0]?.tot > 0 ? perTipo[0] : null;
-    return { righe, totale, gettonato };
+      .map((nome) => ({
+        nome,
+        n: totalePlayer(current.counts[nome]),
+        ua: uaPlayer(current.counts[nome]),
+      }))
+      .sort((a, b) => b.ua - a.ua || b.n - a.n);
+    const totN = righe.reduce((a, r) => a + r.n, 0);
+    const totUA = righe.reduce((a, r) => a + r.ua, 0);
+    // Drink più gettonato (per quantità).
+    const perDrink: Record<string, number> = {};
+    players.forEach((nome) => {
+      const pc = current.counts[nome] ?? {};
+      for (const [id, q] of Object.entries(pc)) perDrink[id] = (perDrink[id] ?? 0) + q;
+    });
+    const top = Object.entries(perDrink).sort((a, b) => b[1] - a[1])[0];
+    const gettonato = top ? { ...drinkInfo(top[0]), q: top[1] } : null;
+    return { righe, totN, totUA, gettonato };
   }, [current, players]);
 
+  // ── Statistiche di tutte le serate ──
   const statTutte = useMemo(() => {
-    // Aggrega su tutte le serate, includendo anche nomi non più in comitiva.
-    const totali: Record<string, number> = {};
-    let record = { nome: "", tot: 0, serataLabel: "" };
-    let totaleStorico = 0;
+    const totUA: Record<string, number> = {};
+    let record = { nome: "", ua: 0, serataLabel: "" };
+    let totaleUA = 0;
     serate.forEach((s, i) => {
       const nomi = new Set([...players, ...Object.keys(s.counts)]);
       nomi.forEach((nome) => {
-        const t = totalePlayer(s.counts[nome]);
-        totali[nome] = (totali[nome] ?? 0) + t;
-        totaleStorico += t;
-        if (t > record.tot) {
-          record = { nome, tot: t, serataLabel: labelSerata(s, i) };
+        const u = uaPlayer(s.counts[nome]);
+        totUA[nome] = (totUA[nome] ?? 0) + u;
+        totaleUA += u;
+        if (u > record.ua) {
+          record = { nome, ua: u, serataLabel: labelSerata(s, i) };
         }
       });
     });
-    const classifica = Object.entries(totali)
-      .map(([nome, tot]) => ({ nome, tot }))
-      .filter((r) => r.tot > 0)
-      .sort((a, b) => b.tot - a.tot);
+    const classifica = Object.entries(totUA)
+      .map(([nome, ua]) => ({ nome, ua }))
+      .filter((r) => r.ua > 0.05)
+      .sort((a, b) => b.ua - a.ua);
     return {
       classifica,
-      record: record.tot > 0 ? record : null,
-      totaleStorico,
+      record: record.ua > 0 ? record : null,
+      totaleUA,
       nSerate: serate.length,
     };
   }, [serate, players]);
+
+  // ── Catalogo filtrato per il picker ──
+  const risultati = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return CATALOGO.filter(
+      (d) =>
+        (catFilter === "tutte" || d.cat === catFilter) &&
+        (q === "" ||
+          d.nome.toLowerCase().includes(q) ||
+          d.cat.toLowerCase().includes(q)),
+    );
+  }, [search, catFilter]);
+
+  const risultatiPerCat = useMemo(() => {
+    const map = new Map<Categoria, Drink[]>();
+    for (const d of risultati) {
+      if (!map.has(d.cat)) map.set(d.cat, []);
+      map.get(d.cat)!.push(d);
+    }
+    return map;
+  }, [risultati]);
 
   if (!current) return null;
 
@@ -212,7 +261,7 @@ export default function Contabar({
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`rounded-sm border px-5 py-2 font-[family-name:var(--font-titolo)] text-sm tracking-widest transition-all ${
+            className={`rounded-sm border px-4 py-2 font-[family-name:var(--font-titolo)] text-sm tracking-widest transition-all ${
               tab === id
                 ? "border-assenzio bg-smeraldo/50 text-assenzio-pallido"
                 : "border-ottone/40 text-etichetta-scura hover:border-ottone"
@@ -225,82 +274,101 @@ export default function Contabar({
 
       {/* ── TAB CONTA ── */}
       {tab === "conta" && (
-        <div className="grid w-full gap-4 sm:grid-cols-2">
-          {players.map((nome) => {
-            const pc = current.counts[nome];
-            const tot = totalePlayer(pc);
-            const eroe = isEroe(pc);
-            return (
-              <div key={nome} className="etichetta rounded-sm p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-xl font-semibold text-etichetta">
-                    {nome}
-                    {eroe && (
-                      <span className="ml-2 text-sm text-assenzio">
-                        🧃 EROE
-                      </span>
-                    )}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-[family-name:var(--font-titolo)] text-3xl font-black text-ottone-chiaro">
-                      {tot}
+        <>
+          <p className="max-w-xl text-center text-sm italic text-etichetta-scura">
+            UA = unità alcoliche (~12 g d&rsquo;alcol puro). Chi guida e beve
+            analcolico vale 0. Cerca &rsquo;o drink giusto: nu Negroni pesa cchiù
+            &rsquo;e na Corona! 🚗
+          </p>
+          <div className="grid w-full gap-4 sm:grid-cols-2">
+            {players.map((nome) => {
+              const pc = current.counts[nome];
+              const n = totalePlayer(pc);
+              const ua = uaPlayer(pc);
+              const eroe = isEroe(pc);
+              const voci = Object.entries(pc ?? {}).filter(([, q]) => q > 0);
+              return (
+                <div key={nome} className="etichetta rounded-sm p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="min-w-0 flex-1 truncate text-xl font-semibold text-etichetta">
+                      {nome}
+                      {eroe && (
+                        <span className="ml-2 text-sm text-assenzio">
+                          🧃 EROE
+                        </span>
+                      )}
                     </span>
-                    {tot > 0 && (
-                      <button
-                        onClick={() => svuotaPlayer(nome)}
-                        className="text-sm text-etichetta-scura/60 transition-colors hover:text-red-400"
-                        aria-label={`Azzera ${nome}`}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {DRINKS.map((d) => {
-                    const c = pc?.[d.key] ?? 0;
-                    return (
-                      <div
-                        key={d.key}
-                        className={`relative flex items-center overflow-hidden rounded-sm border transition-all ${
-                          c > 0
-                            ? "border-assenzio/60 bg-smeraldo/30"
-                            : "border-ottone/25"
-                        }`}
-                      >
-                        <button
-                          onClick={() => modifica(nome, d.key, 1)}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-lg transition-all hover:bg-smeraldo/40 active:scale-95"
-                          title={`+1 ${d.label}`}
-                        >
-                          <span>{d.emoji}</span>
-                          <span
-                            className={
-                              c > 0
-                                ? "font-semibold text-assenzio-pallido"
-                                : "text-etichetta-scura/50"
-                            }
-                          >
-                            {c}
-                          </span>
-                        </button>
-                        {c > 0 && (
-                          <button
-                            onClick={() => modifica(nome, d.key, -1)}
-                            className="border-l border-ottone/20 px-2 py-1.5 text-sm text-etichetta-scura transition-colors hover:bg-red-950/50 hover:text-red-300"
-                            aria-label={`-1 ${d.label}`}
-                          >
-                            −
-                          </button>
-                        )}
+                    <div className="flex items-center gap-2 text-right">
+                      <div>
+                        <p className="testo-oro font-[family-name:var(--font-titolo)] text-3xl font-black leading-none">
+                          {fmtUA(ua)}
+                        </p>
+                        <p className="text-[10px] tracking-widest text-ottone-chiaro">
+                          UA · {n} drink
+                        </p>
                       </div>
-                    );
-                  })}
+                      {n > 0 && (
+                        <button
+                          onClick={() => svuotaPlayer(nome)}
+                          className="text-sm text-etichetta-scura/60 transition-colors hover:text-red-400"
+                          aria-label={`Azzera ${nome}`}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {voci.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {voci.map(([id, q]) => {
+                        const info = drinkInfo(id);
+                        return (
+                          <div
+                            key={id}
+                            className="flex items-center overflow-hidden rounded-sm border border-assenzio/50 bg-smeraldo/25"
+                          >
+                            <button
+                              onClick={() => modifica(nome, id, 1)}
+                              className="flex items-center gap-1.5 px-2.5 py-1.5 text-base transition-all hover:bg-smeraldo/50 active:scale-95"
+                              title={`+1 ${info.nome}`}
+                            >
+                              <span>{info.emoji}</span>
+                              <span className="max-w-[9rem] truncate text-etichetta">
+                                {info.nome}
+                              </span>
+                              <span className="font-semibold text-assenzio-pallido">
+                                ×{q}
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => modifica(nome, id, -1)}
+                              className="border-l border-ottone/20 px-2 py-1.5 text-sm text-etichetta-scura transition-colors hover:bg-red-950/50 hover:text-red-300"
+                              aria-label={`-1 ${info.nome}`}
+                            >
+                              −
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setPicker(nome);
+                      setSearch("");
+                      setCatFilter("tutte");
+                    }}
+                    className="mt-3 w-full rounded-sm border border-ottone/50 bg-bottiglia/60 py-2 font-[family-name:var(--font-titolo)] text-sm tracking-widest text-ottone-chiaro transition-all hover:border-ottone hover:bg-smeraldo/30"
+                  >
+                    ➕ AGGIUNGI DRINK
+                  </button>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {/* ── TAB STATISTICHE ── */}
@@ -327,7 +395,6 @@ export default function Contabar({
             ))}
           </div>
 
-          {/* Statistiche della serata corrente */}
           {statScope === "serata" && (
             <>
               <div className="etichetta w-full rounded-sm p-5 text-center">
@@ -335,56 +402,71 @@ export default function Contabar({
                   {formatData(current.date).toUpperCase()}
                 </p>
                 <p className="testo-oro font-[family-name:var(--font-titolo)] text-5xl font-black">
-                  {statSerata.totale}
+                  {fmtUA(statSerata.totUA)}
                 </p>
                 <p className="text-lg italic text-etichetta-scura">
-                  bevute in tutto &mdash;{" "}
+                  unità alcoliche &mdash; {statSerata.totN} drink in tutto
                   {statSerata.gettonato
-                    ? `'o cchiù gettonato: ${statSerata.gettonato.emoji} ${statSerata.gettonato.label} (${statSerata.gettonato.tot})`
-                    : "ancora asciutto…"}
+                    ? ` · 'o cchiù gettonato: ${statSerata.gettonato.emoji} ${statSerata.gettonato.nome} (${statSerata.gettonato.q})`
+                    : ""}
                 </p>
               </div>
 
-              {statSerata.totale === 0 ? (
+              {statSerata.totN === 0 ? (
                 <p className="text-center text-lg italic text-etichetta-scura">
                   Ancora nisciuno ha bevuto niente. Che serata triste! 🥱
                 </p>
               ) : (
-                <ol className="w-full space-y-2">
-                  {statSerata.righe
-                    .filter((r) => r.tot > 0)
-                    .map((r, i) => (
-                      <li
-                        key={r.nome}
-                        className={`etichetta flex items-center gap-4 rounded-sm px-5 py-3 ${
-                          i === 0
-                            ? "shadow-[0_0_18px_rgba(201,162,39,0.35)]"
-                            : ""
-                        }`}
-                      >
-                        <span className="w-8 text-center font-[family-name:var(--font-titolo)] text-2xl text-ottone-chiaro">
-                          {MEDAGLIE[i] ?? `${i + 1}°`}
-                        </span>
-                        <span
-                          className={`flex-1 truncate text-xl ${
+                <>
+                  <p className="font-[family-name:var(--font-titolo)] text-sm tracking-[0.3em] text-ottone-chiaro">
+                    🍺 CHI HA BEVUTO CCHIÙ ALCOL
+                  </p>
+                  <ol className="w-full space-y-2">
+                    {statSerata.righe
+                      .filter((r) => r.n > 0)
+                      .map((r, i) => (
+                        <li
+                          key={r.nome}
+                          className={`etichetta flex items-center gap-4 rounded-sm px-5 py-3 ${
                             i === 0
-                              ? "testo-oro font-bold"
-                              : "text-etichetta"
+                              ? "shadow-[0_0_18px_rgba(201,162,39,0.35)]"
+                              : ""
                           }`}
                         >
-                          {r.nome}
-                        </span>
-                        <span className="font-[family-name:var(--font-titolo)] text-2xl font-black text-etichetta">
-                          {r.tot}
-                        </span>
-                      </li>
-                    ))}
-                </ol>
+                          <span className="w-8 text-center font-[family-name:var(--font-titolo)] text-2xl text-ottone-chiaro">
+                            {MEDAGLIE[i] ?? `${i + 1}°`}
+                          </span>
+                          <span
+                            className={`flex-1 truncate text-xl ${
+                              i === 0 ? "testo-oro font-bold" : "text-etichetta"
+                            }`}
+                          >
+                            {r.nome}
+                            {r.ua < 0.05 && (
+                              <span className="ml-2 text-sm text-assenzio">
+                                🧃
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-right">
+                            <span className="font-[family-name:var(--font-titolo)] text-2xl font-black text-etichetta">
+                              {fmtUA(r.ua)}
+                            </span>
+                            <span className="ml-1 text-xs text-ottone-chiaro">
+                              UA
+                            </span>
+                            <p className="text-[11px] text-etichetta-scura">
+                              {r.n} drink
+                            </p>
+                          </span>
+                        </li>
+                      ))}
+                  </ol>
+                </>
               )}
             </>
           )}
 
-          {/* Statistiche di tutte le serate */}
           {statScope === "tutte" && (
             <>
               <div className="grid w-full grid-cols-2 gap-3">
@@ -392,16 +474,14 @@ export default function Contabar({
                   <p className="testo-oro font-[family-name:var(--font-titolo)] text-4xl font-black">
                     {statTutte.nSerate}
                   </p>
-                  <p className="text-sm italic text-etichetta-scura">
-                    serate
-                  </p>
+                  <p className="text-sm italic text-etichetta-scura">serate</p>
                 </div>
                 <div className="etichetta rounded-sm p-4 text-center">
                   <p className="testo-oro font-[family-name:var(--font-titolo)] text-4xl font-black">
-                    {statTutte.totaleStorico}
+                    {fmtUA(statTutte.totaleUA)}
                   </p>
                   <p className="text-sm italic text-etichetta-scura">
-                    bevute totali
+                    UA totali
                   </p>
                 </div>
               </div>
@@ -416,7 +496,7 @@ export default function Contabar({
                     {statTutte.record.nome}
                   </p>
                   <p className="mt-1 text-lg italic text-etichetta">
-                    {statTutte.record.tot} bevute &mdash;{" "}
+                    {fmtUA(statTutte.record.ua)} UA &mdash;{" "}
                     {statTutte.record.serataLabel}
                   </p>
                   <p className="mt-1 text-base text-etichetta-scura">
@@ -427,7 +507,7 @@ export default function Contabar({
 
               {statTutte.classifica.length === 0 ? (
                 <p className="text-center text-lg italic text-etichetta-scura">
-                  Archivio vacante. Cumincia a bevere! 🥂
+                  Archivio asciutto. Cumincia a bevere! 🥂
                 </p>
               ) : (
                 <>
@@ -454,8 +534,13 @@ export default function Contabar({
                         >
                           {r.nome}
                         </span>
-                        <span className="font-[family-name:var(--font-titolo)] text-2xl font-black text-etichetta">
-                          {r.tot}
+                        <span>
+                          <span className="font-[family-name:var(--font-titolo)] text-2xl font-black text-etichetta">
+                            {fmtUA(r.ua)}
+                          </span>
+                          <span className="ml-1 text-xs text-ottone-chiaro">
+                            UA
+                          </span>
                         </span>
                       </li>
                     ))}
@@ -481,7 +566,7 @@ export default function Contabar({
               .filter(({ s }) => (s.log ?? []).length > 0)
               .reverse()
               .map(({ s, i }) => {
-                const log = [...(s.log ?? [])].reverse(); // più recente in cima
+                const log = [...(s.log ?? [])].reverse();
                 return (
                   <div key={s.id} className="etichetta rounded-sm p-4">
                     <div className="flex items-baseline justify-between gap-2">
@@ -494,39 +579,147 @@ export default function Contabar({
                     </div>
                     <div className="divisorio-oro my-3" />
                     <div className="overflow-x-auto">
-                      <div className="min-w-[320px]">
+                      <div className="min-w-[340px]">
                         <div className="flex items-center gap-3 border-b border-ottone/30 px-2 pb-1 text-xs tracking-widest text-ottone-chiaro">
-                          <span className="w-32">DATA / ORA</span>
+                          <span className="w-28">DATA / ORA</span>
                           <span className="flex-1">CHI</span>
                           <span className="text-right">DRINK</span>
                         </div>
-                        {log.map((e, k) => (
-                          <div
-                            key={`${e.t}-${k}`}
-                            className="flex items-center gap-3 border-b border-ottone/10 px-2 py-1.5 text-base"
-                          >
-                            <span className="w-32 text-etichetta-scura">
-                              {formatOra(e.t)}
-                            </span>
-                            <span className="flex-1 truncate text-etichetta">
-                              {e.nome}
-                            </span>
-                            <span className="text-right">
-                              <span className="text-lg">
-                                {DRINK_MAP[e.drink].emoji}
-                              </span>{" "}
-                              <span className="text-etichetta-scura">
-                                {DRINK_MAP[e.drink].label}
+                        {log.map((e, k) => {
+                          const info = drinkInfo(e.drink);
+                          return (
+                            <div
+                              key={`${e.t}-${k}`}
+                              className="flex items-center gap-3 border-b border-ottone/10 px-2 py-1.5 text-base"
+                            >
+                              <span className="w-28 text-sm text-etichetta-scura">
+                                {formatOra(e.t)}
                               </span>
-                            </span>
-                          </div>
-                        ))}
+                              <span className="flex-1 truncate text-etichetta">
+                                {e.nome}
+                              </span>
+                              <span className="truncate text-right">
+                                <span className="text-lg">{info.emoji}</span>{" "}
+                                <span className="text-etichetta-scura">
+                                  {info.nome}
+                                </span>
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
                 );
               })
           )}
+        </div>
+      )}
+
+      {/* ── Picker: cerca e seleziona il drink ── */}
+      {picker && (
+        <div
+          className="fixed inset-0 z-[550] flex items-end justify-center bg-abisso/85 p-3 backdrop-blur-sm sm:items-center"
+          onClick={() => setPicker(null)}
+        >
+          <div
+            className="etichetta flex max-h-[85vh] w-full max-w-lg animate-pop-in flex-col rounded-sm p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-[family-name:var(--font-titolo)] text-lg text-ottone-chiaro">
+                Che t&rsquo;e bevuto, {picker}?
+              </p>
+              <button
+                onClick={() => setPicker(null)}
+                className="rounded-sm border border-ottone/50 px-3 py-1 text-sm text-etichetta-scura hover:text-etichetta"
+              >
+                FATTO
+              </button>
+            </div>
+
+            <input
+              ref={searchRef}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cerca… (mojito, corona, shot, spritz…)"
+              className="mt-3 w-full rounded-sm border border-ottone/40 bg-abisso/60 px-3 py-2.5 text-lg text-etichetta placeholder:text-etichetta-scura/50 focus:border-assenzio focus:outline-none"
+            />
+
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {(["tutte", ...CATEGORIE.map((c) => c.cat)] as const).map((c) => {
+                const emoji =
+                  c === "tutte"
+                    ? "🍸"
+                    : CATEGORIE.find((x) => x.cat === c)?.emoji;
+                return (
+                  <button
+                    key={c}
+                    onClick={() => setCatFilter(c as Categoria | "tutte")}
+                    className={`rounded-full border px-3 py-1 text-sm transition-all ${
+                      catFilter === c
+                        ? "border-assenzio bg-smeraldo/50 text-assenzio-pallido"
+                        : "border-ottone/40 text-etichetta-scura hover:border-ottone"
+                    }`}
+                  >
+                    {emoji} {c === "tutte" ? "Tutti" : c}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-3 flex-1 overflow-y-auto pr-1">
+              {risultati.length === 0 && (
+                <p className="py-6 text-center italic text-etichetta-scura">
+                  Nun tenimmo &rsquo;stu drink… pruova n&rsquo;atu nomme! 🤷
+                </p>
+              )}
+              {[...risultatiPerCat.entries()].map(([cat, drinks]) => (
+                <div key={cat} className="mb-3">
+                  <p className="mb-1 text-xs tracking-[0.3em] text-ottone-chiaro">
+                    {CATEGORIE.find((c) => c.cat === cat)?.emoji} {cat.toUpperCase()}
+                  </p>
+                  <div className="space-y-1.5">
+                    {drinks.map((d) => {
+                      const q = current.counts[picker]?.[d.id] ?? 0;
+                      const ua = uaById(d.id);
+                      return (
+                        <button
+                          key={d.id}
+                          onClick={() => modifica(picker, d.id, 1)}
+                          className={`flex w-full items-center gap-3 rounded-sm border px-3 py-2 text-left transition-all active:scale-[0.98] ${
+                            q > 0
+                              ? "border-assenzio/60 bg-smeraldo/30"
+                              : "border-ottone/25 hover:border-ottone/70 hover:bg-smeraldo/20"
+                          }`}
+                        >
+                          <span className="text-2xl">{d.emoji}</span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-lg text-etichetta">
+                              {d.nome}
+                            </span>
+                            <span className="text-xs text-etichetta-scura">
+                              {d.abv > 0
+                                ? `${d.abv}% · ${d.ml} ml · ${fmtUA(ua)} UA`
+                                : "analcolico · 0 UA"}
+                            </span>
+                          </span>
+                          {q > 0 && (
+                            <span className="rounded-full bg-assenzio/20 px-2 py-0.5 text-sm font-semibold text-assenzio-pallido">
+                              ×{q}
+                            </span>
+                          )}
+                          <span className="font-[family-name:var(--font-titolo)] text-xl text-ottone-chiaro">
+                            +
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>

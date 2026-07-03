@@ -1,33 +1,14 @@
 // Dati e persistenza del "Contabar": drink bevuti per giocatore, divisi per
 // serata (perché la comitiva magari si vede più giorni). Tutto in localStorage.
+// I drink sono identificati dall'id del catalogo (lib/drinks.ts), così ognuno
+// porta con sé la sua gradazione e il conto in unità alcoliche.
 
-export type DrinkKey = "birra" | "shot" | "cocktail" | "spritz" | "vino" | "soft";
+import { uaById } from "./drinks";
 
-export const DRINKS: {
-  key: DrinkKey;
-  emoji: string;
-  label: string;
-  alcol: boolean;
-}[] = [
-  { key: "birra", emoji: "🍺", label: "Birra", alcol: true },
-  { key: "shot", emoji: "🥃", label: "Shot", alcol: true },
-  { key: "cocktail", emoji: "🍹", label: "Cocktail", alcol: true },
-  { key: "spritz", emoji: "🍊", label: "Spritz", alcol: true },
-  { key: "vino", emoji: "🍷", label: "Vino", alcol: true },
-  { key: "soft", emoji: "🧃", label: "Analcolico", alcol: false },
-];
-
-export const DRINK_MAP: Record<
-  DrinkKey,
-  { emoji: string; label: string; alcol: boolean }
-> = Object.fromEntries(
-  DRINKS.map((d) => [d.key, { emoji: d.emoji, label: d.label, alcol: d.alcol }]),
-) as Record<DrinkKey, { emoji: string; label: string; alcol: boolean }>;
-
-export type PlayerCount = Partial<Record<DrinkKey, number>>;
+export type PlayerCount = Record<string, number>; // drinkId -> quantità
 export type Counts = Record<string, PlayerCount>;
 // Registro cronologico: ogni bevuta aggiunta lascia una riga con data/ora.
-export type LogEvent = { t: string; nome: string; drink: DrinkKey };
+export type LogEvent = { t: string; nome: string; drink: string };
 export type Serata = {
   id: string;
   date: string;
@@ -65,22 +46,24 @@ export function nuovaSerata(): Serata {
   };
 }
 
+// Numero di bevute (di qualsiasi tipo).
 export function totalePlayer(c: PlayerCount | undefined): number {
   if (!c) return 0;
   return Object.values(c).reduce((a, b) => a + (b ?? 0), 0);
 }
 
-export function totaleAlcolici(c: PlayerCount | undefined): number {
+// Unità alcoliche totali: ogni drink pesa per la sua gradazione.
+export function uaPlayer(c: PlayerCount | undefined): number {
   if (!c) return 0;
-  return DRINKS.filter((d) => d.alcol).reduce(
-    (a, d) => a + (c[d.key] ?? 0),
+  return Object.entries(c).reduce(
+    (a, [id, qty]) => a + uaById(id) * (qty ?? 0),
     0,
   );
 }
 
 // Un "eroe" beve solo analcolici (probabilmente guida): almeno un drink, zero alcol.
 export function isEroe(c: PlayerCount | undefined): boolean {
-  return totalePlayer(c) > 0 && totaleAlcolici(c) === 0;
+  return totalePlayer(c) > 0 && uaPlayer(c) < 0.05;
 }
 
 export function formatData(iso: string): string {
