@@ -204,3 +204,18 @@ export function playBlip(freq: number): void {
   if (isMuted() || !ac() || !ctx) return;
   tone(freq, ctx.currentTime, 0.06, "square", 0.14);
 }
+
+// Cin cin: due bicchieri che si toccano.
+export function playCheers(): void {
+  if (isMuted() || !ac() || !ctx) return;
+  const now = ctx.currentTime;
+  tone(2100, now, 0.12, "triangle", 0.16);
+  tone(2640, now + 0.035, 0.18, "triangle", 0.14);
+  noise(now, 0.05, 0.05, "highpass", 3200);
+}
+
+// Piccolo "annulla" per quando si toglie un drink.
+export function playUndo(): void {
+  if (isMuted() || !ac() || !ctx) return;
+  tone(440, ctx.currentTime, 0.1, "sine", 0.16, 260);
+}

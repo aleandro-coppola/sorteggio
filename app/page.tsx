@@ -9,6 +9,7 @@ import Squadre from "@/components/modes/Squadre";
 import Ordine from "@/components/modes/Ordine";
 import CampoMinato from "@/components/modes/CampoMinato";
 import Pallini from "@/components/modes/Pallini";
+import Contabar from "@/components/modes/Contabar";
 import SoundToggle from "@/components/SoundToggle";
 import {
   NOMI_SPECIALI,
@@ -28,6 +29,7 @@ const MODES = [
   { id: "pallini", label: "Pallini", icon: "🔮", desc: "Quant'e ne stanno?" },
   { id: "squadre", label: "Squadre", icon: "👥", desc: "Sparte 'a cumitiva" },
   { id: "ordine", label: "Ordine", icon: "🎲", desc: "Chi accumencia?" },
+  { id: "contabar", label: "Contabar", icon: "🍺", desc: "Conta 'e bevute" },
 ] as const;
 
 type ModeId = (typeof MODES)[number]["id"];
@@ -113,7 +115,9 @@ export default function Home() {
     }
   };
 
-  const enough = players.length >= 2;
+  // Il contabar basta un giocatore; i giochi ne vogliono almeno due.
+  const needed = mode === "contabar" ? 1 : 2;
+  const enough = players.length >= needed;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center gap-8 px-4 py-8 sm:py-12">
@@ -197,7 +201,7 @@ export default function Home() {
       </section>
 
       {/* ── Modalità ── */}
-      <nav className="grid w-full grid-cols-3 gap-2 sm:grid-cols-4">
+      <nav className="grid w-full grid-cols-3 gap-2">
         {MODES.map((m) => (
           <button
             key={m.id}
@@ -255,6 +259,9 @@ export default function Home() {
             )}
             {mode === "pallini" && (
               <Pallini players={players} notify={notify} />
+            )}
+            {mode === "contabar" && (
+              <Contabar players={players} notify={notify} />
             )}
           </>
         )}
