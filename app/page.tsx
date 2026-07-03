@@ -8,6 +8,8 @@ import Eliminazione from "@/components/modes/Eliminazione";
 import Squadre from "@/components/modes/Squadre";
 import Ordine from "@/components/modes/Ordine";
 import CampoMinato from "@/components/modes/CampoMinato";
+import Pallini from "@/components/modes/Pallini";
+import SoundToggle from "@/components/SoundToggle";
 import {
   NOMI_SPECIALI,
   TOAST_FATA_LIBERATA,
@@ -23,6 +25,7 @@ const MODES = [
   { id: "eliminazione", label: "Eliminazione", icon: "💀", desc: "Urdemo ca resta" },
   { id: "chipaga", label: "Chi Paga?", icon: "🍻", desc: "Pe' bere e pavà" },
   { id: "mine", label: "Campo Minato", icon: "💣", desc: "Nun tuccà 'a bomba!" },
+  { id: "pallini", label: "Pallini", icon: "🔮", desc: "Quant'e ne stanno?" },
   { id: "squadre", label: "Squadre", icon: "👥", desc: "Sparte 'a cumitiva" },
   { id: "ordine", label: "Ordine", icon: "🎲", desc: "Chi accumencia?" },
 ] as const;
@@ -114,6 +117,8 @@ export default function Home() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center gap-8 px-4 py-8 sm:py-12">
+      <SoundToggle />
+
       {/* ── Etichetta della bottiglia ── */}
       <header className="etichetta w-full rounded-sm px-6 py-8 text-center">
         <p className="font-[family-name:var(--font-titolo)] text-xs tracking-[0.5em] text-ottone-chiaro">
@@ -247,6 +252,9 @@ export default function Home() {
             {mode === "ordine" && <Ordine players={players} />}
             {mode === "mine" && (
               <CampoMinato players={players} notify={notify} />
+            )}
+            {mode === "pallini" && (
+              <Pallini players={players} notify={notify} />
             )}
           </>
         )}

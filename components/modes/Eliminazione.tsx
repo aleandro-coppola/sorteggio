@@ -10,6 +10,7 @@ import {
   frase,
   pick,
 } from "@/lib/phrases";
+import { playOut, playWin } from "@/lib/sound";
 
 type Result = {
   name: string;
@@ -49,6 +50,7 @@ export default function Eliminazione({
 
     if (next.length === 1) {
       fireConfetti(240);
+      playWin();
       setResult({
         name: next[0],
         phrase: `${pick(FRASI_VINCITORE)} — E ${out}? ${frase(
@@ -58,6 +60,7 @@ export default function Eliminazione({
         campione: true,
       });
     } else {
+      playOut();
       setResult({
         name: out,
         phrase: frase(pick(FRASI_ELIMINATO), out),

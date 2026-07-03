@@ -12,6 +12,7 @@ import {
   pick,
   shuffle,
 } from "@/lib/phrases";
+import { playPop, playWin } from "@/lib/sound";
 
 type Result = {
   name: string;
@@ -79,12 +80,14 @@ export default function Duello({
     if (newScore[winner] >= target) {
       const loser = sfidanti.find((s) => s !== winner)!;
       fireConfetti(220);
+      playWin();
       setResult({
         name: winner,
         phrase: `${frase(pick(FRASI_VITTORIA_DUELLO), winner)} — E pe' ${loser}: ${pick(FRASI_PERDENTE)}`,
         finale: true,
       });
     } else {
+      playPop();
       setResult({
         name: winner,
         phrase: frase(pick(FRASI_ROUND_DUELLO), winner),

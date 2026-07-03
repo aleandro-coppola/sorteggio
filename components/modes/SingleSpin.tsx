@@ -12,6 +12,7 @@ import {
   frase,
   pick,
 } from "@/lib/phrases";
+import { playFail, playWin } from "@/lib/sound";
 
 type Variant = "classico" | "chipaga";
 
@@ -36,9 +37,11 @@ export default function SingleSpin({
     const miracolo = Math.random() < 0.01 ? pick(FRASI_MIRACOLO) : null;
     if (variant === "classico") {
       fireConfetti();
+      playWin();
       setResult({ name, phrase: pick(FRASI_VINCITORE), miracolo });
     } else {
       const pool = penitenza === "paga" ? FRASI_PAGA : FRASI_BEVE;
+      playFail();
       setResult({ name, phrase: frase(pick(pool), name), miracolo });
     }
   };

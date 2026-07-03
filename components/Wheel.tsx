@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { playSpin } from "@/lib/sound";
 
 // Palette dei segmenti: vetro di bottiglia, smeraldo e lampi di chartreuse.
 const SEGMENT_COLORS = ["#143523", "#1e6b47", "#0d2417", "#2e8f5f", "#0f2e1e"];
@@ -64,6 +65,7 @@ export default function Wheel({
     const fullTurns = 5 + Math.floor(Math.random() * 4);
     setRotation(rotation + fullTurns * 360 + delta);
     setSpinning(true);
+    playSpin(4400); // il ticchettio segue la decelerazione della ruota
   }, [spinning, disabled, entries.length, seg, rotation]);
 
   const handleEnd = () => {

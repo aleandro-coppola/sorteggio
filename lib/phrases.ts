@@ -135,6 +135,29 @@ export const FRASI_VUOTO = [
 export const FRASI_ULTIMA_TESSERA =
   "💀 È rimasta sulo essa… e tutti sanno che d'è.";
 
+// ── Indovina 'e pallini ──
+export const FRASI_PALLINI_VINCITORE = [
+  "🎯 {nome} ha 'a mira bona: cchiù vicino 'e tutti!",
+  "🎯 Vince {nome}! Tene ll'uocchie 'e nu cecato… anzi no, tutt' 'o cuntrario!",
+  "🎯 {nome} 'nce ha pigliato! Aggio visto certe cunte…",
+  "🎯 Bravo {nome}! Manco 'o ragioniere faceva 'e mmeglio!",
+] as const;
+
+export const FRASI_PALLINI_ESATTO = [
+  "🎯💯 {nome} HA 'NDUVINATO PRECISO PRECISO! Ma tiene 'a cammera nascosta?!",
+  "🎯💯 SPACCATO 'O NUMERO! {nome}, chesta è magia napulitana!",
+] as const;
+
+export const FRASI_PALLINI_PAREGGIO = [
+  "🤝 Pareggio! {nomi} hanno 'a stessa mira. Facite ambressa a mettervi d'accordo!",
+] as const;
+
+export const FRASI_PALLINI_LONTANO = [
+  "…e {nome} ca ha ditto {tiro}? Ma addò steve guardanno?! 🙈",
+  "…menzione speciale a {nome} ({tiro}): 'a matematica nun è 'o forte suoio! 📉",
+  "…{nome} ha sparato {tiro}. Frate', servono ll'uocchiale! 👓",
+] as const;
+
 // ── Easter egg: miracolo (1% di probabilità a ogni giro) ──
 export const FRASI_MIRACOLO = [
   "⚡ MIRACOLO 'E SAN GENNARO! 'A rota s'è fermata addò vuleva essa! ⚡",
@@ -178,4 +201,16 @@ export const TOAST_FATA_LIBERATA =
 
 export function frase(template: string, nome: string): string {
   return template.replaceAll("{nome}", nome);
+}
+
+// Sostituisce più segnaposto tipo {nome}, {tiro}, {nomi}…
+export function frasi(
+  template: string,
+  vars: Record<string, string | number>,
+): string {
+  let out = template;
+  for (const [k, v] of Object.entries(vars)) {
+    out = out.replaceAll(`{${k}}`, String(v));
+  }
+  return out;
 }

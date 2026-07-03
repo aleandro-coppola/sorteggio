@@ -2,11 +2,16 @@
 
 import { useState } from "react";
 import { shuffle } from "@/lib/phrases";
+import { playPour, playWin } from "@/lib/sound";
 
 export default function Ordine({ players }: { players: string[] }) {
   const [order, setOrder] = useState<string[]>([]);
 
-  const tira = () => setOrder(shuffle(players));
+  const tira = () => {
+    setOrder(shuffle(players));
+    playPour();
+    setTimeout(playWin, 350);
+  };
 
   const MEDAGLIE = ["👑", "🥈", "🥉"];
 

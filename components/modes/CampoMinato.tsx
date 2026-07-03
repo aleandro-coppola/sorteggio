@@ -17,6 +17,15 @@ import {
   pick,
   shuffle,
 } from "@/lib/phrases";
+import {
+  playBomb,
+  playBonus,
+  playInvert,
+  playJolly,
+  playMalus,
+  playPop,
+  playWin,
+} from "@/lib/sound";
 
 type Contenuto = "vuoto" | "bomba" | "jolly" | "malus" | "bonus" | "inverti" | "disinnescata";
 
@@ -180,8 +189,10 @@ export default function CampoMinato({
               gameOver: true,
             });
             fireConfetti(200);
+            playWin();
             return;
           }
+          playJolly();
           const j = pick(nascoste);
           nuova = nuova.map((t, k) =>
             k === j ? { ...t, contenuto: "bomba" as Contenuto } : t,
@@ -199,6 +210,7 @@ export default function CampoMinato({
         }
         setGriglia(nuova.map((t) => ({ ...t, scoperta: true })));
         setFase("finita");
+        playBomb();
         setOverlay({
           title: "GAME OVER",
           name: nome,
@@ -221,18 +233,22 @@ export default function CampoMinato({
         break;
       case "malus":
         click += 1;
+        playMalus();
         setEvento(frase(pick(FRASI_MALUS), nome));
         break;
       case "bonus":
         ferie = [...ferie, nome];
+        playBonus();
         setEvento(frase(pick(FRASI_BONUS), nome));
         break;
       case "inverti":
         dir = -dir;
         setDirezione(dir);
+        playInvert();
         setEvento(pick(FRASI_INVERTI));
         break;
       default:
+        playPop();
         setEvento(frase(pick(FRASI_VUOTO), nome));
     }
 

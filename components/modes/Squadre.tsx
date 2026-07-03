@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { fireConfetti } from "@/lib/confetti";
 import { NOMI_SQUADRE, shuffle } from "@/lib/phrases";
+import { playWin } from "@/lib/sound";
 
 type Team = {
   name: string;
@@ -35,6 +36,7 @@ export default function Squadre({
     mixed.forEach((p, i) => result[i % n].members.push(p));
     setTeams(result);
     fireConfetti(100);
+    playWin();
   };
 
   return (
