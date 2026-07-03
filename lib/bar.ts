@@ -17,9 +17,23 @@ export const DRINKS: {
   { key: "soft", emoji: "🧃", label: "Analcolico", alcol: false },
 ];
 
+export const DRINK_MAP: Record<
+  DrinkKey,
+  { emoji: string; label: string; alcol: boolean }
+> = Object.fromEntries(
+  DRINKS.map((d) => [d.key, { emoji: d.emoji, label: d.label, alcol: d.alcol }]),
+) as Record<DrinkKey, { emoji: string; label: string; alcol: boolean }>;
+
 export type PlayerCount = Partial<Record<DrinkKey, number>>;
 export type Counts = Record<string, PlayerCount>;
-export type Serata = { id: string; date: string; counts: Counts };
+// Registro cronologico: ogni bevuta aggiunta lascia una riga con data/ora.
+export type LogEvent = { t: string; nome: string; drink: DrinkKey };
+export type Serata = {
+  id: string;
+  date: string;
+  counts: Counts;
+  log?: LogEvent[];
+};
 
 const KEY = "assenzio-bar";
 
@@ -47,6 +61,7 @@ export function nuovaSerata(): Serata {
     id: `s-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     date: new Date().toISOString(),
     counts: {},
+    log: [],
   };
 }
 
@@ -80,4 +95,15 @@ export function formatData(iso: string): string {
 
 export function labelSerata(s: Serata, index: number): string {
   return `Serata #${index + 1} — ${formatData(s.date)}`;
+}
+
+// Data + ora compatte di una singola bevuta, es. "3 lug, 23:41".
+export function formatOra(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleString("it-IT", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }

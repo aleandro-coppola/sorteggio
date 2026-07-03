@@ -17,7 +17,7 @@ gli amici, al mare, per i giochi da tavolo e per i giochi alcolici.
 | 🍻 **Chi Paga?** | Per i giochi alcolici: la ruota decide chi paga (o chi beve). |
 | 💣 **Campo Minato** | La ruota decide l'ordine dei tap, poi si scava su una griglia 3×3–6×6: bomba = game over, jolly = immunità, malus "clicca due volte", bonus "salta il giro" e tessera che inverte il giro. Se il jolly ti salva, la bomba si riarma altrove. |
 | 🔮 **Pallini** | Un contenitore (bicchiere, bottiglia o caraffa) pieno di pallini: ognuno stima quanti sono, si preme **Verifica** e chi va più vicino vince. Tre livelli di difficoltà; chi sbaglia di più si becca lo sfottò. |
-| 🍺 **Contabar** | Segna i drink bevuti da ogni giocatore (birra, shot, cocktail, spritz, vino, analcolico), con +/− per ognuno. Supporta **più serate** e mostra le statistiche: totale della serata, classifica, drink più gettonato, campione assoluto e la **sbornia storica** (chi ha bevuto di più in una singola serata). |
+| 🍺 **Contabar** | Segna i drink bevuti da ogni giocatore (birra, shot, cocktail, spritz, vino, analcolico), con +/− per ognuno. Supporta **più serate** e ha tre schede: **Conta**, **Statistiche** (totale serata, classifica, drink più gettonato, campione assoluto e **sbornia storica** = chi ha bevuto di più in una singola serata) e **Storico** = tabella cronologica di ogni bevuta con data e ora, raggruppata per serata. |
 | 👥 **Squadre** | Divide la comitiva in 2–4 squadre con nomi a tema assenzio. |
 | 🎲 **Ordine** | Sorteggia l'ordine di gioco: chi comincia e chi arriva urdemo… comme sempe. |
 

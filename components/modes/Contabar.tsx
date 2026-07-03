@@ -3,12 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Counts,
+  DRINK_MAP,
   DRINKS,
   DrinkKey,
   formatData,
+  formatOra,
   isEroe,
   labelSerata,
   loadSerate,
+  LogEvent,
   nuovaSerata as creaSerata,
   saveSerate,
   Serata,
@@ -27,7 +30,7 @@ export default function Contabar({
 }) {
   const [serate, setSerate] = useState<Serata[]>([]);
   const [currentId, setCurrentId] = useState<string>("");
-  const [tab, setTab] = useState<"conta" | "stat">("conta");
+  const [tab, setTab] = useState<"conta" | "stat" | "storico">("conta");
   const [statScope, setStatScope] = useState<"serata" | "tutte">("serata");
   const loaded = useRef(false);
 
@@ -57,11 +60,25 @@ export default function Contabar({
       prev.map((s) => {
         if (s.id !== currentId) return s;
         const pc = { ...(s.counts[nome] ?? {}) };
-        const val = Math.max(0, (pc[key] ?? 0) + delta);
+        const cur = pc[key] ?? 0;
+        const val = Math.max(0, cur + delta);
+        if (val === cur) return s; // nessun cambiamento reale
         if (val === 0) delete pc[key];
         else pc[key] = val;
         const counts: Counts = { ...s.counts, [nome]: pc };
-        return { ...s, counts };
+        const log: LogEvent[] = s.log ? [...s.log] : [];
+        if (delta > 0) {
+          log.push({ t: new Date().toISOString(), nome, drink: key });
+        } else {
+          // togli l'ultima bevuta corrispondente dal registro
+          for (let i = log.length - 1; i >= 0; i--) {
+            if (log[i].nome === nome && log[i].drink === key) {
+              log.splice(i, 1);
+              break;
+            }
+          }
+        }
+        return { ...s, counts, log };
       }),
     );
     if (delta > 0) playCheers();
@@ -72,7 +89,11 @@ export default function Contabar({
     setSerate((prev) =>
       prev.map((s) =>
         s.id === currentId
-          ? { ...s, counts: { ...s.counts, [nome]: {} } }
+          ? {
+              ...s,
+              counts: { ...s.counts, [nome]: {} },
+              log: (s.log ?? []).filter((e) => e.nome !== nome),
+            }
           : s,
       ),
     );
@@ -185,6 +206,7 @@ export default function Contabar({
           [
             ["conta", "🍻 CONTA"],
             ["stat", "📊 STATISTICHE"],
+            ["storico", "📜 STORICO"],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -441,6 +463,69 @@ export default function Contabar({
                 </>
               )}
             </>
+          )}
+        </div>
+      )}
+
+      {/* ── TAB STORICO ── */}
+      {tab === "storico" && (
+        <div className="flex w-full max-w-xl flex-col gap-6">
+          {serate.every((s) => (s.log ?? []).length === 0) ? (
+            <p className="text-center text-lg italic text-etichetta-scura">
+              Ancora niente storico. Ogni bevuta ca aggiungi resta segnata cca
+              cu data e ora! 🕰️
+            </p>
+          ) : (
+            serate
+              .map((s, i) => ({ s, i }))
+              .filter(({ s }) => (s.log ?? []).length > 0)
+              .reverse()
+              .map(({ s, i }) => {
+                const log = [...(s.log ?? [])].reverse(); // più recente in cima
+                return (
+                  <div key={s.id} className="etichetta rounded-sm p-4">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="font-[family-name:var(--font-titolo)] text-lg text-ottone-chiaro">
+                        {labelSerata(s, i)}
+                      </p>
+                      <span className="text-sm italic text-etichetta-scura">
+                        {log.length} bevute
+                      </span>
+                    </div>
+                    <div className="divisorio-oro my-3" />
+                    <div className="overflow-x-auto">
+                      <div className="min-w-[320px]">
+                        <div className="flex items-center gap-3 border-b border-ottone/30 px-2 pb-1 text-xs tracking-widest text-ottone-chiaro">
+                          <span className="w-32">DATA / ORA</span>
+                          <span className="flex-1">CHI</span>
+                          <span className="text-right">DRINK</span>
+                        </div>
+                        {log.map((e, k) => (
+                          <div
+                            key={`${e.t}-${k}`}
+                            className="flex items-center gap-3 border-b border-ottone/10 px-2 py-1.5 text-base"
+                          >
+                            <span className="w-32 text-etichetta-scura">
+                              {formatOra(e.t)}
+                            </span>
+                            <span className="flex-1 truncate text-etichetta">
+                              {e.nome}
+                            </span>
+                            <span className="text-right">
+                              <span className="text-lg">
+                                {DRINK_MAP[e.drink].emoji}
+                              </span>{" "}
+                              <span className="text-etichetta-scura">
+                                {DRINK_MAP[e.drink].label}
+                              </span>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
           )}
         </div>
       )}
