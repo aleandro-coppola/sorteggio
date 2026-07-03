@@ -89,6 +89,52 @@ export const FRASI_VITTORIA_DUELLO = [
   "{nome} trionfa! L'ato se ne torna a casa a piere. 🚶",
 ] as const;
 
+// ── Campo minato ──
+export const FRASI_BOMBA = [
+  "💥 BUUUM! {nome} vola 'n aria! 'A pizza mo' 'a paga chi è scuppiato!",
+  "💥 {nome} ha truvato 'a bomba! Requiescat in pace, fratè.",
+  "💥 KABOOM! {nome}, 'o Vesuvio a cunfronto è nu fuoco 'e paglia!",
+  "💥 {nome} ha fatto BOOM! Arricugliete 'e piezze e purtatele ô bar.",
+] as const;
+
+export const FRASI_JOLLY = [
+  "🃏 {nome} ha truvato 'o JOLLY! Mo' tene n'anema 'e riserva!",
+  "🃏 Jolly pe' {nome}! 'A Fata Verde 'o pruteggerà… na vota sola!",
+  "🃏 {nome} s'è accattato l'immunità! Che culo, signò!",
+] as const;
+
+export const FRASI_JOLLY_USATO = [
+  "🧯 'A bomba è scuppiata… ma 'o jolly ha sarvato a {nome}! ATTENZIONE: n'ata bomba è stata annascosta! 💣",
+  "🧯 {nome} doveva murì, ma 'o jolly ha pavato pe' isso! Occhio: 'a bomba s'è spustata! 💣",
+] as const;
+
+export const FRASI_MALUS = [
+  "🔁 Uh, che piezzo 'e sfurtuna: {nome} adda cliccà N'ATA VOTA!",
+  "🔁 {nome}, 'a rota vo' vedé si tiene 'o core: clicca n'ata vota!",
+  "🔁 Doppio tap pe' {nome}! E nun tremmà, ja'!",
+] as const;
+
+export const FRASI_BONUS = [
+  "🏖️ {nome} se piglia na pausa: 'o prossimo giro se ne va ô mare!",
+  "🏖️ Bonus pe' {nome}: 'o giro c'appresso s'o salta! Beato isso!",
+  "🏖️ {nome} 'o prossimo giro sta 'n ferie. Firmato: 'a Fata Verde.",
+] as const;
+
+export const FRASI_INVERTI = [
+  "🌀 GIRO 'NVERTITO! Mo' se va a 'll'ata parte!",
+  "🌀 Marcia indietro! 'O giro cagna verso, uagliù!",
+] as const;
+
+export const FRASI_VUOTO = [
+  "🍃 Nisciente… puó respirà, {nome}.",
+  "🍃 Vacante! {nome} campa n'atu ppoco.",
+  "🍃 Tutto buono, {nome}. Pe' mo'.",
+  "🍃 {nome} 'a scanza. 'A bomba sta ancora llà ffore…",
+] as const;
+
+export const FRASI_ULTIMA_TESSERA =
+  "💀 È rimasta sulo essa… e tutti sanno che d'è.";
+
 // ── Easter egg: miracolo (1% di probabilità a ogni giro) ──
 export const FRASI_MIRACOLO = [
   "⚡ MIRACOLO 'E SAN GENNARO! 'A rota s'è fermata addò vuleva essa! ⚡",

@@ -15,6 +15,7 @@ gli amici, al mare, per i giochi da tavolo e per i giochi alcolici.
 | ⚔️ **Duello** | Due sfidanti, al meglio di 3 o di 5. Tabellone punti e sfottò finale per chi perde. |
 | 💀 **Eliminazione** | Ogni giro elimina qualcuno: l'ultimo che resta è il campione. |
 | 🍻 **Chi Paga?** | Per i giochi alcolici: la ruota decide chi paga (o chi beve). |
+| 💣 **Campo Minato** | La ruota decide l'ordine dei tap, poi si scava su una griglia 3×3–6×6: bomba = game over, jolly = immunità, malus "clicca due volte", bonus "salta il giro" e tessera che inverte il giro. Se il jolly ti salva, la bomba si riarma altrove. |
 | 👥 **Squadre** | Divide la comitiva in 2–4 squadre con nomi a tema assenzio. |
 | 🎲 **Ordine** | Sorteggia l'ordine di gioco: chi comincia e chi arriva urdemo… comme sempe. |
 

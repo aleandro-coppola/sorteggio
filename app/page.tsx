@@ -7,6 +7,7 @@ import Duello from "@/components/modes/Duello";
 import Eliminazione from "@/components/modes/Eliminazione";
 import Squadre from "@/components/modes/Squadre";
 import Ordine from "@/components/modes/Ordine";
+import CampoMinato from "@/components/modes/CampoMinato";
 import {
   NOMI_SPECIALI,
   TOAST_FATA_LIBERATA,
@@ -21,6 +22,7 @@ const MODES = [
   { id: "duello", label: "Duello", icon: "⚔️", desc: "Meglio 'e 3 o 'e 5" },
   { id: "eliminazione", label: "Eliminazione", icon: "💀", desc: "Urdemo ca resta" },
   { id: "chipaga", label: "Chi Paga?", icon: "🍻", desc: "Pe' bere e pavà" },
+  { id: "mine", label: "Campo Minato", icon: "💣", desc: "Nun tuccà 'a bomba!" },
   { id: "squadre", label: "Squadre", icon: "👥", desc: "Sparte 'a cumitiva" },
   { id: "ordine", label: "Ordine", icon: "🎲", desc: "Chi accumencia?" },
 ] as const;
@@ -190,7 +192,7 @@ export default function Home() {
       </section>
 
       {/* ── Modalità ── */}
-      <nav className="grid w-full grid-cols-3 gap-2 sm:grid-cols-6">
+      <nav className="grid w-full grid-cols-3 gap-2 sm:grid-cols-4">
         {MODES.map((m) => (
           <button
             key={m.id}
@@ -243,6 +245,9 @@ export default function Home() {
               <Squadre players={players} notify={notify} />
             )}
             {mode === "ordine" && <Ordine players={players} />}
+            {mode === "mine" && (
+              <CampoMinato players={players} notify={notify} />
+            )}
           </>
         )}
       </section>
