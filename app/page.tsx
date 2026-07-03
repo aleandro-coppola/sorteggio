@@ -11,6 +11,8 @@ import CampoMinato from "@/components/modes/CampoMinato";
 import Pallini from "@/components/modes/Pallini";
 import Contabar from "@/components/modes/Contabar";
 import SoundToggle from "@/components/SoundToggle";
+import SessionBar from "@/components/SessionBar";
+import { useSession } from "@/components/SessionProvider";
 import {
   NOMI_SPECIALI,
   TOAST_FATA_LIBERATA,
@@ -36,10 +38,8 @@ type ModeId = (typeof MODES)[number]["id"];
 
 type Toast = { id: number; msg: string };
 
-const STORAGE_KEY = "assenzio-giocatori";
-
 export default function Home() {
-  const [players, setPlayers] = useState<string[]>([]);
+  const { players, setPlayers } = useSession();
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<ModeId>("classico");
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -47,7 +47,6 @@ export default function Home() {
   const [shakeInput, setShakeInput] = useState(false);
   const titleClicks = useRef(0);
   const toastId = useRef(0);
-  const loaded = useRef(false);
 
   const notify = (msg: string) => {
     const id = ++toastId.current;
@@ -57,31 +56,14 @@ export default function Home() {
     }, 4000);
   };
 
-  // Carica/salva i giocatori, così la comitiva non si riscrive ogni volta.
+  // Battuta notturna alla prima apertura.
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setPlayers(JSON.parse(saved));
-    } catch {
-      /* localStorage non disponibile: pazienza */
-    }
-    loaded.current = true;
-
     const hour = new Date().getHours();
     if (hour >= 2 && hour < 6) {
       setTimeout(() => notify(TOAST_NOTTE_FONDA), 1500);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (!loaded.current) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(players));
-    } catch {
-      /* idem */
-    }
-  }, [players]);
 
   const addPlayer = () => {
     const name = input.trim();
@@ -122,6 +104,7 @@ export default function Home() {
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center gap-8 px-4 py-8 sm:py-12">
       <SoundToggle />
+      <SessionBar />
 
       {/* ── Etichetta della bottiglia ── */}
       <header className="etichetta w-full rounded-sm px-6 py-8 text-center">

@@ -47,13 +47,47 @@ gorgoglìo del contenitore… — tutti **sintetizzati al volo con la Web Audio
 API**: nessun file audio, funzionano offline. Il pulsante 🔊/🔇 in alto a
 destra li accende e spegne (la scelta viene ricordata).
 
+## Sessioni condivise 👥 (Firebase, opzionale)
+
+Di default l'app è **locale**: ogni telefono tiene i suoi dati in `localStorage`.
+Attivando Firebase, la comitiva può entrare in una **sessione condivisa** con
+un *codice + password*: tutti vedono la stessa cumitiva e lo stesso Contabar,
+**aggiornati in tempo reale** (ognuno segna le sue bevute dal proprio telefono).
+
+Il pulsante **👥 Sessione** in alto a sinistra apre l'accesso. Stesso codice +
+stessa password = stessa stanza; se non esiste, la crei tu (e ti porti dietro
+la cumitiva del momento). L'indicatore diventa 🟢 quando sei in diretta.
+
+### Come attivarlo
+
+1. Crea un progetto gratis su [console.firebase.google.com](https://console.firebase.google.com)
+2. Crea un database **Firestore** (parti in *modalità test*)
+3. Aggiungi un'app **Web** (`</>`) e copia i valori di `firebaseConfig`
+4. Copia `.env.example` in **`.env.local`** e incolla i tuoi valori
+5. Riavvia (`npm run dev`): comparirà la modalità condivisa
+
+Le chiavi hanno prefisso `NEXT_PUBLIC_` perché sono chiavi client pubbliche
+(stanno nel browser: è normale). La sicurezza vera si fa con le **Regole di
+Firestore** in console.
+
+**Avvertenze oneste:**
+- La "password di sessione" è un *segreto condiviso*, non un login vero: chi ha
+  codice+password vede e modifica tutto. Va benissimo per amici, non per dati
+  sensibili.
+- La sincronizzazione è *last-write-wins* sull'intera stanza: per un gruppo di
+  amici è perfetta; con decine di modifiche nello stesso istante qualche
+  aggiornamento potrebbe sovrascriversi.
+- In *modalità test* Firestore è aperto in lettura/scrittura: per un uso serio
+  imposta regole più restrittive (o Firebase Auth).
+
 ## Stack
 
-Stack: **Next.js 15 (App Router) + React 19 + Tailwind CSS 4**. Nessuna
+Stack: **Next.js 15 (App Router) + React 19 + Tailwind CSS 4** + **Firebase**
+(Firestore, opzionale per le sessioni condivise). Per il resto nessuna
 dipendenza extra: ruota e contenitori in SVG, coriandoli su canvas, suoni in
-Web Audio e animazioni CSS fatte in casa. I giocatori e lo storico del
-Contabar restano salvati in `localStorage`, così la comitiva non si riscrive
-a ogni serata e le bevute di ieri sera non si perdono.
+Web Audio e animazioni CSS fatte in casa. Senza Firebase, giocatori e storico
+del Contabar restano in `localStorage`, così la comitiva non si riscrive a
+ogni serata e le bevute di ieri sera non si perdono.
 
 *Bere responsabilmente, perdere con dignità. Nisciuna Fata Verde è stata
 maltrattata durante 'e sorteggi.*

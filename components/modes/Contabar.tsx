@@ -7,11 +7,8 @@ import {
   formatOra,
   isEroe,
   labelSerata,
-  loadSerate,
   LogEvent,
   nuovaSerata as creaSerata,
-  saveSerate,
-  Serata,
   totalePlayer,
   uaPlayer,
 } from "@/lib/bar";
@@ -24,6 +21,7 @@ import {
   uaById,
 } from "@/lib/drinks";
 import { playCheers, playUndo } from "@/lib/sound";
+import { useSession } from "@/components/SessionProvider";
 
 const MEDAGLIE = ["👑", "🥈", "🥉"];
 const fmtUA = (n: number) => n.toFixed(1);
@@ -42,7 +40,8 @@ export default function Contabar({
   players: string[];
   notify: (msg: string) => void;
 }) {
-  const [serate, setSerate] = useState<Serata[]>([]);
+  // Le serate vivono nella sessione: locali o condivise nel cloud.
+  const { serate, setSerate } = useSession();
   const [currentId, setCurrentId] = useState<string>("");
   const [tab, setTab] = useState<"conta" | "stat" | "storico">("conta");
   const [statScope, setStatScope] = useState<"serata" | "tutte">("serata");
@@ -50,31 +49,19 @@ export default function Contabar({
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState<Categoria | "tutte">("tutte");
   const searchRef = useRef<HTMLInputElement>(null);
-  const loaded = useRef(false);
-
-  useEffect(() => {
-    const saved = loadSerate();
-    if (saved.length > 0) {
-      setSerate(saved);
-      setCurrentId(saved[saved.length - 1].id);
-    } else {
-      const s = creaSerata();
-      setSerate([s]);
-      setCurrentId(s.id);
-    }
-    loaded.current = true;
-  }, []);
-
-  useEffect(() => {
-    if (loaded.current) saveSerate(serate);
-  }, [serate]);
 
   useEffect(() => {
     if (picker) setTimeout(() => searchRef.current?.focus(), 50);
   }, [picker]);
 
+  // Tieni valida la serata selezionata quando l'elenco cambia (anche da remoto).
   const currentIdx = serate.findIndex((s) => s.id === currentId);
   const current = serate[currentIdx];
+  useEffect(() => {
+    if (serate.length > 0 && currentIdx === -1) {
+      setCurrentId(serate[serate.length - 1].id);
+    }
+  }, [serate, currentIdx]);
 
   const modifica = (nome: string, id: string, delta: number) => {
     setSerate((prev) =>
@@ -212,7 +199,22 @@ export default function Contabar({
     return map;
   }, [risultati]);
 
-  if (!current) return null;
+  if (!current) {
+    return (
+      <div className="etichetta mx-auto max-w-md rounded-sm p-8 text-center">
+        <p className="animate-float text-5xl">🍾</p>
+        <p className="mt-4 text-xl italic text-etichetta">
+          Ancora nisciuna serata. Aprine una e cumincia a cuntà &rsquo;e bevute!
+        </p>
+        <button
+          onClick={aggiungiSerata}
+          className="mt-5 rounded-sm border border-assenzio/60 bg-smeraldo/40 px-8 py-3 font-[family-name:var(--font-titolo)] text-lg tracking-widest text-assenzio-pallido transition-all hover:scale-105 hover:bg-smeraldo/70"
+        >
+          ➕ APRI &rsquo;A PRIMMA SERATA
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex w-full flex-col items-center gap-6">
