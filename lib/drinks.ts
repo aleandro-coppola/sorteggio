@@ -37,6 +37,8 @@ const RAW: [string, Categoria, number, number, string?][] = [
   // ── Birra (dalla più leggera alla più tosta) ──
   ["Radler", "Birra", 2.5, 330],
   ["Corona", "Birra", 4.5, 330],
+  ["Corona col collo (gin)", "Birra", 8.7, 350, "🍸"],
+  ["Corona col collo (vodka)", "Birra", 8.7, 350, "🍸"],
   ["Guinness", "Birra", 4.2, 500],
   ["Moretti", "Birra", 4.6, 330],
   ["Ichnusa", "Birra", 4.7, 330],
@@ -50,6 +52,8 @@ const RAW: [string, Categoria, number, number, string?][] = [
   ["Ceres", "Birra", 7.7, 330],
   ["Chimay Blu", "Birra", 9.0, 330],
   ["Tennent's Super", "Birra", 9.0, 330],
+  ["Tennent's col collo (gin)", "Birra", 12.7, 360, "🍸"],
+  ["Tennent's col collo (vodka)", "Birra", 12.7, 360, "🍸"],
   // ── Cocktail ──
   ["Aperol Spritz", "Cocktail", 8.0, 150, "🍊"],
   ["Spritz Campari", "Cocktail", 9.0, 150, "🍊"],
