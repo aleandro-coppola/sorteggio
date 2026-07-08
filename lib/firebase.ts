@@ -3,7 +3,11 @@
 // config, si attivano le sessioni condivise in tempo reale via Firestore.
 
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { Firestore, getFirestore } from "firebase/firestore";
+import {
+  connectFirestoreEmulator,
+  Firestore,
+  getFirestore,
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -31,6 +35,16 @@ export function getDb(): Firestore | null {
       ? getApp()
       : initializeApp(firebaseConfig as Record<string, string>);
     _db = getFirestore(app);
+    // Solo per sviluppo/test: NEXT_PUBLIC_FIRESTORE_EMULATOR="host:porta".
+    const emu = process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR;
+    if (emu) {
+      const [host, port] = emu.split(":");
+      try {
+        connectFirestoreEmulator(_db, host, Number(port));
+      } catch {
+        /* già connesso */
+      }
+    }
     return _db;
   } catch {
     return null;

@@ -107,7 +107,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setPlayers(readLocal<string[]>(PLAYERS_KEY, []));
     setSerate(readLocal<Serata[]>(BAR_KEY, []));
-    const savedCode = readLocal<string | null>(SESSION_KEY, null);
+    // Il codice sessione è salvato come stringa semplice (non JSON).
+    let savedCode: string | null = null;
+    try {
+      savedCode = localStorage.getItem(SESSION_KEY);
+    } catch {
+      savedCode = null;
+    }
     hydrated.current = true;
     if (savedCode && cloudConfigured && getDb()) {
       setSessionCode(savedCode);
