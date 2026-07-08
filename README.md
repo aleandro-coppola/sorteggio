@@ -80,6 +80,21 @@ Firestore** in console.
 - In *modalità test* Firestore è aperto in lettura/scrittura: per un uso serio
   imposta regole più restrittive (o Firebase Auth).
 
+## Installazione come app (PWA) 📱
+
+L'app è una **PWA installabile**: dal browser puoi aggiungerla alla home e usarla
+a schermo intero come un'app vera (con la sua icona a bottiglia d'assenzio).
+
+- **iPhone/iPad (Safari)**: tocca *Condividi* → *Aggiungi a Home*
+- **Android (Chrome)**: menu ⋮ → *Installa app* / *Aggiungi a schermata Home*
+- **Desktop (Chrome/Edge)**: icona *Installa* nella barra degli indirizzi
+
+Include manifest, icone (normali e *maskable*) e un **service worker** che fa da
+cache: la parte locale funziona anche **offline**. Le sessioni condivise, essendo
+in cloud, richiedono connessione. Nota: in `next dev` il service worker è
+disattivato apposta; si attiva nella build di produzione (`npm run build && npm
+start`, o su Vercel).
+
 ## Stack
 
 Stack: **Next.js 15 (App Router) + React 19 + Tailwind CSS 4** + **Firebase**

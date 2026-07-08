@@ -1,15 +1,24 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SessionProvider } from "@/components/SessionProvider";
+import PWA from "@/components/PWA";
 
 export const metadata: Metadata = {
   title: "ASSENZIO — La Ruota dei Sorteggi",
   description:
     "Distillato di pura fortuna dal 1805. Duelli, eliminazioni, squadre, penitenze e sfottò in napoletano. Da usare con amici, al mare e nei giochi alcolici. Bere responsabilmente, perdere con dignità.",
+  applicationName: "Assenzio",
+  appleWebApp: {
+    capable: true,
+    title: "Assenzio",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
   themeColor: "#06110b",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
@@ -30,6 +39,7 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
+        <PWA />
         <SessionProvider>{children}</SessionProvider>
       </body>
     </html>
