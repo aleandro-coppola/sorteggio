@@ -10,6 +10,7 @@ import Ordine from "@/components/modes/Ordine";
 import CampoMinato from "@/components/modes/CampoMinato";
 import Pallini from "@/components/modes/Pallini";
 import Contabar from "@/components/modes/Contabar";
+import Taverna from "@/components/modes/Taverna";
 import SoundToggle from "@/components/SoundToggle";
 import SessionBar from "@/components/SessionBar";
 import { useSession } from "@/components/SessionProvider";
@@ -32,6 +33,7 @@ const MODES = [
   { id: "squadre", label: "Squadre", icon: "👥", desc: "Sparte 'a cumitiva" },
   { id: "ordine", label: "Ordine", icon: "🎲", desc: "Chi accumencia?" },
   { id: "contabar", label: "Contabar", icon: "🍺", desc: "Conta 'e bevute" },
+  { id: "taverna", label: "Taverna", icon: "🛡️", desc: "GDR napulitano" },
 ] as const;
 
 type ModeId = (typeof MODES)[number]["id"];
@@ -184,7 +186,7 @@ export default function Home() {
       </section>
 
       {/* ── Modalità ── */}
-      <nav className="grid w-full grid-cols-3 gap-2">
+      <nav className="grid w-full grid-cols-3 gap-2 sm:grid-cols-5">
         {MODES.map((m) => (
           <button
             key={m.id}
@@ -245,6 +247,9 @@ export default function Home() {
             )}
             {mode === "contabar" && (
               <Contabar players={players} notify={notify} />
+            )}
+            {mode === "taverna" && (
+              <Taverna players={players} notify={notify} />
             )}
           </>
         )}
