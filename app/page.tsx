@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Fairy from "@/components/Fairy";
 import SingleSpin from "@/components/modes/SingleSpin";
 import Duello from "@/components/modes/Duello";
@@ -125,7 +125,13 @@ export default function Home() {
       prev.includes(nome) ? prev.filter((n) => n !== nome) : [...prev, nome],
     );
 
-  const attivi = players.filter((p) => !esclusi.includes(p));
+  // Memoizzato: riferimento stabile finché non cambiano davvero cumitiva o
+  // esclusi, altrimenti i giochi che si resettano su [players] ripartirebbero
+  // a ogni render (es. a ogni toast).
+  const attivi = useMemo(
+    () => players.filter((p) => !esclusi.includes(p)),
+    [players, esclusi],
+  );
   // Contabar e Taverna riguardano tutta la cumitiva; i giochi solo chi gioca.
   const usaTutti = mode === "contabar" || mode === "taverna";
   const partecipanti = usaTutti ? players : attivi;
