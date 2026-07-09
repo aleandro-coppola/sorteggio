@@ -106,6 +106,27 @@ export default function Contabar({
     );
   };
 
+  // Elimina UNA riga dello storico e scala il conteggio corrispondente, così
+  // sparisce anche dalle statistiche (utile per ripulire dati sfasati).
+  const eliminaDalLog = (serataId: string, ev: LogEvent) => {
+    setSerate((prev) =>
+      prev.map((s) => {
+        if (s.id !== serataId) return s;
+        const log = [...(s.log ?? [])];
+        const idx = log.findIndex(
+          (e) => e.t === ev.t && e.nome === ev.nome && e.drink === ev.drink,
+        );
+        if (idx !== -1) log.splice(idx, 1);
+        const pc = { ...(s.counts[ev.nome] ?? {}) };
+        const val = Math.max(0, (pc[ev.drink] ?? 0) - 1);
+        if (val === 0) delete pc[ev.drink];
+        else pc[ev.drink] = val;
+        return { ...s, counts: { ...s.counts, [ev.nome]: pc }, log };
+      }),
+    );
+    playUndo();
+  };
+
   const aggiungiSerata = () => {
     const s = creaSerata();
     setSerate((prev) => [...prev, s]);
@@ -583,7 +604,8 @@ export default function Contabar({
                         <div className="flex items-center gap-3 border-b border-ottone/30 px-2 pb-1 text-xs tracking-widest text-ottone-chiaro">
                           <span className="w-28">DATA / ORA</span>
                           <span className="flex-1">CHI</span>
-                          <span className="text-right">DRINK</span>
+                          <span>DRINK</span>
+                          <span className="w-6" />
                         </div>
                         {log.map((e, k) => {
                           const info = drinkInfo(e.drink);
@@ -604,6 +626,14 @@ export default function Contabar({
                                   {info.nome}
                                 </span>
                               </span>
+                              <button
+                                onClick={() => eliminaDalLog(s.id, e)}
+                                className="w-6 shrink-0 text-etichetta-scura/50 transition-colors hover:text-red-400"
+                                aria-label={`Elimina ${info.nome} di ${e.nome}`}
+                                title="Elimina questa bevuta (scala anche le statistiche)"
+                              >
+                                ✕
+                              </button>
                             </div>
                           );
                         })}
