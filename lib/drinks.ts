@@ -89,6 +89,7 @@ const RAW: [string, Categoria, number, number, string?][] = [
   ["Rum", "Shot & Liquori", 40.0, 40],
   ["Whisky", "Shot & Liquori", 40.0, 40],
   ["Gin liscio", "Shot & Liquori", 40.0, 40],
+  ["4 Bianchi", "Shot & Liquori", 40.0, 60, "⚪"],
   ["Grappa", "Shot & Liquori", 42.0, 40],
   ["Assenzio", "Shot & Liquori", 68.0, 30, "🧚"],
   // ── Vino & Bolle ──
