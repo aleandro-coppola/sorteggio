@@ -11,6 +11,7 @@ import CampoMinato from "@/components/modes/CampoMinato";
 import Pallini from "@/components/modes/Pallini";
 import Contabar from "@/components/modes/Contabar";
 import Taverna from "@/components/modes/Taverna";
+import Carte from "@/components/modes/Carte";
 import SoundToggle from "@/components/SoundToggle";
 import SessionBar from "@/components/SessionBar";
 import { useSession } from "@/components/SessionProvider";
@@ -34,6 +35,7 @@ const MODES = [
   { id: "ordine", label: "Ordine", icon: "🎲", desc: "Chi accumencia?" },
   { id: "contabar", label: "Contabar", icon: "🍺", desc: "Conta 'e bevute" },
   { id: "taverna", label: "Taverna", icon: "🛡️", desc: "GDR napulitano" },
+  { id: "carte", label: "Carte", icon: "♠️", desc: "'A carta cchiù auta vince" },
 ] as const;
 
 type ModeId = (typeof MODES)[number]["id"];
@@ -223,7 +225,7 @@ export default function Home() {
       </section>
 
       {/* ── Modalità ── */}
-      <nav className="grid w-full grid-cols-3 gap-2 sm:grid-cols-5">
+      <nav className="grid w-full grid-cols-3 gap-2 sm:grid-cols-6">
         {MODES.map((m) => (
           <button
             key={m.id}
@@ -314,6 +316,7 @@ export default function Home() {
               <Squadre players={partecipanti} notify={notify} />
             )}
             {mode === "ordine" && <Ordine players={partecipanti} />}
+            {mode === "carte" && <Carte players={partecipanti} />}
             {mode === "mine" && (
               <CampoMinato players={partecipanti} notify={notify} />
             )}
