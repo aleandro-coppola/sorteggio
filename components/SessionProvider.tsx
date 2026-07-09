@@ -3,7 +3,12 @@
 // Stato condiviso della "sessione": cumitiva (giocatori) + Contabar (serate).
 // Senza Firebase configurato → tutto in locale (localStorage), come prima.
 // Con Firebase → entri in una stanza con codice+password e i dati si
-// sincronizzano in tempo reale tra tutti i telefoni (last-write-wins).
+// sincronizzano in tempo reale tra tutti i telefoni.
+//
+// Ogni modifica viene applicata al cloud con una TRANSAZIONE Firestore: la
+// funzione di aggiornamento (es. "togli 1 birra a Ciro") viene rieseguita sullo
+// stato più fresco del server, così due telefoni che modificano insieme non si
+// sovrascrivono a vicenda (niente più bevute che "riappaiono").
 
 import {
   createContext,
@@ -19,9 +24,9 @@ import {
   doc,
   getDoc,
   onSnapshot,
+  runTransaction,
   serverTimestamp,
   setDoc,
-  updateDoc,
 } from "firebase/firestore";
 import { cloudConfigured, getDb } from "@/lib/firebase";
 import { Serata } from "@/lib/bar";
@@ -72,17 +77,23 @@ const readLocal = <T,>(key: string, fallback: T): T => {
   }
 };
 
+const toUpdater = <T,>(action: SetStateAction<T>): ((prev: T) => T) =>
+  typeof action === "function" ? (action as (prev: T) => T) : () => action;
+
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [players, setPlayers] = useState<string[]>([]);
-  const [serate, setSerate] = useState<Serata[]>([]);
+  const [players, setPlayersState] = useState<string[]>([]);
+  const [serate, setSerateState] = useState<Serata[]>([]);
   const [sessionCode, setSessionCode] = useState<string | null>(null);
   const [status, setStatus] = useState<SessionStatus>("local");
   const [error, setError] = useState<string | null>(null);
 
   const hydrated = useRef(false);
-  const applyingRemote = useRef(false);
   const unsub = useRef<null | (() => void)>(null);
-  const writeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const codeRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    codeRef.current = sessionCode;
+  }, [sessionCode]);
 
   function subscribe(code: string) {
     const db = getDb();
@@ -92,22 +103,61 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       doc(db, "sessioni", code),
       (snap) => {
         if (!snap.exists()) return;
-        if (snap.metadata.hasPendingWrites) return; // ignora l'eco locale
+        if (snap.metadata.hasPendingWrites) return; // solo stato confermato dal server
         const data = snap.data();
-        applyingRemote.current = true;
-        setPlayers(Array.isArray(data.players) ? data.players : []);
-        setSerate(Array.isArray(data.serate) ? data.serate : []);
+        setPlayersState(Array.isArray(data.players) ? data.players : []);
+        setSerateState(Array.isArray(data.serate) ? data.serate : []);
         setStatus("connected");
       },
       () => setStatus("error"),
     );
   }
 
+  // Applica un aggiornamento al cloud in modo atomico (transazione).
+  function commitField(
+    field: "players" | "serate",
+    updater: (cur: unknown[]) => unknown[],
+  ) {
+    const code = codeRef.current;
+    const db = getDb();
+    if (!code || !db) return;
+    const ref = doc(db, "sessioni", code);
+    runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      const cur =
+        snap.exists() && Array.isArray(snap.data()[field])
+          ? (snap.data()[field] as unknown[])
+          : [];
+      tx.set(
+        ref,
+        { [field]: updater(cur), updatedAt: serverTimestamp() },
+        { merge: true },
+      );
+    }).catch((e) => console.warn(`sync ${field} fallita:`, e));
+  }
+
+  // Setter "intelligenti": aggiornano subito il locale (reattività) e, se sei in
+  // sessione, applicano la stessa modifica al cloud con una transazione.
+  const setPlayers: Dispatch<SetStateAction<string[]>> = (action) => {
+    const updater = toUpdater(action);
+    setPlayersState(updater);
+    if (codeRef.current) {
+      commitField("players", (cur) => updater(cur as string[]));
+    }
+  };
+
+  const setSerate: Dispatch<SetStateAction<Serata[]>> = (action) => {
+    const updater = toUpdater(action);
+    setSerateState(updater);
+    if (codeRef.current) {
+      commitField("serate", (cur) => updater(cur as Serata[]));
+    }
+  };
+
   // Avvio: carica il locale e, se c'era una sessione, riconnettiti.
   useEffect(() => {
-    setPlayers(readLocal<string[]>(PLAYERS_KEY, []));
-    setSerate(readLocal<Serata[]>(BAR_KEY, []));
-    // Il codice sessione è salvato come stringa semplice (non JSON).
+    setPlayersState(readLocal<string[]>(PLAYERS_KEY, []));
+    setSerateState(readLocal<Serata[]>(BAR_KEY, []));
     let savedCode: string | null = null;
     try {
       savedCode = localStorage.getItem(SESSION_KEY);
@@ -116,6 +166,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
     hydrated.current = true;
     if (savedCode && cloudConfigured && getDb()) {
+      codeRef.current = savedCode;
       setSessionCode(savedCode);
       setStatus("joining");
       subscribe(savedCode);
@@ -124,34 +175,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Persistenza: locale se fuori sessione, Firestore se connesso.
+  // Fuori sessione: persisti in locale. In sessione: ci pensano le transazioni.
   useEffect(() => {
-    if (!hydrated.current) return;
-    if (applyingRemote.current) {
-      applyingRemote.current = false;
-      return;
+    if (!hydrated.current || sessionCode) return;
+    try {
+      localStorage.setItem(PLAYERS_KEY, JSON.stringify(players));
+      localStorage.setItem(BAR_KEY, JSON.stringify(serate));
+    } catch {
+      /* pazienza */
     }
-    if (sessionCode) {
-      if (status !== "connected") return; // aspetta la connessione
-      const db = getDb();
-      if (!db) return;
-      if (writeTimer.current) clearTimeout(writeTimer.current);
-      writeTimer.current = setTimeout(() => {
-        updateDoc(doc(db, "sessioni", sessionCode), {
-          players,
-          serate,
-          updatedAt: serverTimestamp(),
-        }).catch(() => {});
-      }, 400);
-    } else {
-      try {
-        localStorage.setItem(PLAYERS_KEY, JSON.stringify(players));
-        localStorage.setItem(BAR_KEY, JSON.stringify(serate));
-      } catch {
-        /* pazienza */
-      }
-    }
-  }, [players, serate, sessionCode, status]);
+  }, [players, serate, sessionCode]);
 
   async function join(codeRaw: string, password: string): Promise<boolean> {
     const code = codeRaw.trim().toLowerCase().replace(/\s+/g, "-");
@@ -192,7 +225,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       } catch {
         /* pazienza */
       }
-      applyingRemote.current = true; // niente clobber sul cambio sessione
+      codeRef.current = code;
       subscribe(code);
       setSessionCode(code);
       return true;
@@ -211,12 +244,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     } catch {
       /* pazienza */
     }
+    codeRef.current = null;
     setSessionCode(null);
     setStatus("local");
     setError(null);
     // Torna ai dati locali salvati prima della sessione.
-    setPlayers(readLocal<string[]>(PLAYERS_KEY, []));
-    setSerate(readLocal<Serata[]>(BAR_KEY, []));
+    setPlayersState(readLocal<string[]>(PLAYERS_KEY, []));
+    setSerateState(readLocal<Serata[]>(BAR_KEY, []));
   }
 
   return (

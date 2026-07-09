@@ -120,11 +120,9 @@ export default function Contabar({
       return;
     }
     if (!confirm("Sicuro? 'A serata se ne va pe' sempe.")) return;
-    setSerate((prev) => {
-      const next = prev.filter((s) => s.id !== currentId);
-      setCurrentId(next[next.length - 1].id);
-      return next;
-    });
+    const next = serate.filter((s) => s.id !== currentId);
+    setCurrentId(next[next.length - 1].id);
+    setSerate((prev) => prev.filter((s) => s.id !== currentId));
   };
 
   // ── Statistiche serata corrente (per UNITÀ ALCOLICHE) ──

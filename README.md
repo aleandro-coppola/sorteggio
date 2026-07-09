@@ -74,9 +74,10 @@ Firestore** in console.
 - La "password di sessione" è un *segreto condiviso*, non un login vero: chi ha
   codice+password vede e modifica tutto. Va benissimo per amici, non per dati
   sensibili.
-- La sincronizzazione è *last-write-wins* sull'intera stanza: per un gruppo di
-  amici è perfetta; con decine di modifiche nello stesso istante qualche
-  aggiornamento potrebbe sovrascriversi.
+- Ogni modifica (aggiungi/togli bevuta, giocatore…) viene applicata al cloud con
+  una **transazione Firestore**: due telefoni che modificano insieme non si
+  sovrascrivono a vicenda, quindi una bevuta tolta resta tolta anche se un altro
+  sta aggiungendo la sua nello stesso momento.
 - In *modalità test* Firestore è aperto in lettura/scrittura: per un uso serio
   imposta regole più restrittive (o Firebase Auth).
 
