@@ -110,7 +110,7 @@ export default function Taverna({
     setRivelato(false);
     setDadoMostrato({});
     setRolling(true);
-    playSpin(1400);
+    playSpin(900);
 
     // Animazione dei dadi che girano.
     const start = Date.now();
@@ -118,7 +118,7 @@ export default function Taverna({
       const fake: Record<string, number> = {};
       for (const t of risultato.tiri) fake[t.nome] = 1 + Math.floor(Math.random() * 20);
       setDadoMostrato(fake);
-      if (Date.now() - start > 1300) {
+      if (Date.now() - start > 850) {
         if (rollTimer.current) clearInterval(rollTimer.current);
         const finali: Record<string, number> = {};
         for (const t of risultato.tiri) finali[t.nome] = t.dado;
