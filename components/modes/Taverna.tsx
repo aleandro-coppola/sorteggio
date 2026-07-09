@@ -3,6 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "@/components/SessionProvider";
 import { uaPlayer } from "@/lib/bar";
+import { CATALOGO } from "@/lib/drinks";
+import {
+  collezione,
+  Rarita,
+  RARITA_LABEL,
+  RARITA_ORDINE,
+  raritaDi,
+} from "@/lib/cards";
 import { fireConfetti } from "@/lib/confetti";
 import { playFail, playPop, playSpin, playWin } from "@/lib/sound";
 import {
@@ -18,6 +26,38 @@ import {
   risolviEvento,
   STAT_INFO,
 } from "@/lib/taverna";
+
+// Stile per rarità (dentro la palette assenzio: più verde/oro = più raro).
+const RARITA_STILE: Record<
+  Rarita,
+  { border: string; text: string; chip: string }
+> = {
+  comune: {
+    border: "border-etichetta-scura/40",
+    text: "text-etichetta-scura",
+    chip: "bg-vetro/50 text-etichetta-scura",
+  },
+  noncomune: {
+    border: "border-smeraldo-chiaro/70",
+    text: "text-smeraldo-chiaro",
+    chip: "bg-smeraldo/30 text-smeraldo-chiaro",
+  },
+  rara: {
+    border: "border-assenzio/70",
+    text: "text-assenzio",
+    chip: "bg-smeraldo/40 text-assenzio-pallido",
+  },
+  epica: {
+    border: "border-ottone/70",
+    text: "text-ottone-chiaro",
+    chip: "bg-ottone/15 text-ottone-chiaro",
+  },
+  leggendaria: {
+    border: "border-ottone",
+    text: "testo-oro",
+    chip: "bg-ottone/25 text-ottone-chiaro",
+  },
+};
 
 export default function Taverna({
   players,
@@ -43,6 +83,8 @@ export default function Taverna({
     return m;
   }, [players, attiva]);
 
+  const [tab, setTab] = useState<"personaggi" | "album">("personaggi");
+  const [albumChi, setAlbumChi] = useState<string>("__tutti__");
   const [esito, setEsito] = useState<Esito | null>(null);
   const [rolling, setRolling] = useState(false);
   const [dadoMostrato, setDadoMostrato] = useState<Record<string, number>>({});
@@ -123,15 +165,46 @@ export default function Taverna({
     notify(`🎲 Penitenza segnata pe' ${nome}!`);
   };
 
+  // Collezione carte (per il giocatore scelto o tutta la cumitiva).
+  const coll = useMemo(
+    () => collezione(serate, albumChi, players),
+    [serate, albumChi, players],
+  );
+  const collezionate = CATALOGO.filter((d) => (coll[d.id] ?? 0) > 0).length;
+
   return (
     <div className="flex w-full flex-col items-center gap-6">
-      <p className="max-w-xl text-center text-lg italic text-etichetta-scura">
-        Ogni guaglione tene 'o personaggio suoio. Cchiù bevi, cchiù sagli 'e
-        livello… ma cala 'a lucidità! Quanno 'nce sta nu mumento muorto, tira
-        &rsquo;o destino. 🎲
-      </p>
+      {/* ── Tab ── */}
+      <div className="flex gap-2">
+        {(
+          [
+            ["personaggi", "🛡️ PERSONAGGI"],
+            ["album", "🃏 ALBUM"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className={`rounded-sm border px-5 py-2 font-[family-name:var(--font-titolo)] text-sm tracking-widest transition-all ${
+              tab === id
+                ? "border-assenzio bg-smeraldo/50 text-assenzio-pallido"
+                : "border-ottone/40 text-etichetta-scura hover:border-ottone"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-      <button
+      {tab === "personaggi" && (
+        <>
+          <p className="max-w-xl text-center text-lg italic text-etichetta-scura">
+            Ogni guaglione tene 'o personaggio suoio. Cchiù bevi, cchiù sagli 'e
+            livello… ma cala 'a lucidità! Quanno 'nce sta nu mumento muorto,
+            tira &rsquo;o destino. 🎲
+          </p>
+
+          <button
         onClick={tiraDestino}
         disabled={rolling}
         className="etichetta animate-glow-pulse rounded-sm px-10 py-4 font-[family-name:var(--font-titolo)] text-2xl tracking-[0.2em] text-etichetta transition-all hover:scale-105 hover:brightness-125 active:scale-95 disabled:opacity-50"
@@ -252,7 +325,103 @@ export default function Taverna({
             </div>
           );
         })}
-      </div>
+          </div>
+        </>
+      )}
+
+      {/* ── ALBUM CARTE ── */}
+      {tab === "album" && (
+        <div className="flex w-full flex-col items-center gap-5">
+          <p className="max-w-xl text-center text-lg italic text-etichetta-scura">
+            Ogni drink è &rsquo;na carta: 'a collezioni bevennola! Cchiù è forte,
+            cchiù è rara. Acchiappale tutte! 🃏
+          </p>
+
+          {/* Chi: cumitiva o singolo giocatore */}
+          <div className="flex max-w-lg flex-wrap justify-center gap-2">
+            {[["__tutti__", "🏆 Cumitiva"] as const, ...players.map((p) => [p, p] as const)].map(
+              ([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setAlbumChi(id)}
+                  className={`rounded-full border px-4 py-1 text-base transition-all ${
+                    albumChi === id
+                      ? "border-assenzio bg-smeraldo/60 text-assenzio-pallido"
+                      : "border-ottone/40 text-etichetta hover:border-ottone"
+                  }`}
+                >
+                  {label}
+                </button>
+              ),
+            )}
+          </div>
+
+          {/* Progresso */}
+          <div className="etichetta w-full max-w-md rounded-sm p-4 text-center">
+            <p className="testo-oro font-[family-name:var(--font-titolo)] text-3xl font-black">
+              {collezionate} / {CATALOGO.length}
+            </p>
+            <p className="text-sm italic text-etichetta-scura">
+              carte collezionate
+              {albumChi !== "__tutti__" ? ` — ${albumChi}` : ""}
+            </p>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-abisso/60">
+              <div
+                className="h-full rounded-full bg-assenzio/70 transition-all"
+                style={{ width: `${(collezionate / CATALOGO.length) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Griglia carte */}
+          <div className="grid w-full grid-cols-3 gap-2 sm:grid-cols-4">
+            {CATALOGO.map((d) => {
+              const q = coll[d.id] ?? 0;
+              const preso = q > 0;
+              const rar = raritaDi(d.abv);
+              const st = RARITA_STILE[rar];
+              return (
+                <div
+                  key={d.id}
+                  className={`relative flex flex-col items-center rounded-sm border bg-bottiglia/40 p-2 text-center transition-all ${
+                    preso ? st.border : "border-ottone/15"
+                  } ${preso ? "" : "opacity-45"} ${
+                    preso && rar === "leggendaria" ? "animate-glow-pulse" : ""
+                  }`}
+                  title={preso ? `${d.nome} · ${RARITA_LABEL[rar]}` : "Ancora d'a scoprì"}
+                >
+                  <span className="text-3xl">{preso ? d.emoji : "❔"}</span>
+                  <span className="mt-1 w-full truncate text-xs text-etichetta">
+                    {preso ? d.nome : "???"}
+                  </span>
+                  <span className={`text-[9px] tracking-wider ${preso ? st.text : "text-etichetta-scura/50"}`}>
+                    {RARITA_LABEL[rar]}
+                  </span>
+                  {preso ? (
+                    <span className="absolute right-1 top-1 rounded-full bg-abisso/80 px-1.5 text-[11px] font-bold text-assenzio-pallido">
+                      ×{q}
+                    </span>
+                  ) : (
+                    <span className="absolute right-1 top-1 text-xs">🔒</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Legenda rarità */}
+          <div className="flex flex-wrap justify-center gap-2">
+            {RARITA_ORDINE.map((r) => (
+              <span
+                key={r}
+                className={`rounded-full px-2.5 py-0.5 text-xs ${RARITA_STILE[r].chip}`}
+              >
+                {RARITA_LABEL[r]}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Modale evento ── */}
       {esito && (
