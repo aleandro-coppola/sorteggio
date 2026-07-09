@@ -49,6 +49,27 @@ export default function Home() {
   const [shakeInput, setShakeInput] = useState(false);
   const titleClicks = useRef(0);
   const toastId = useRef(0);
+  const [esclusi, setEsclusi] = useState<string[]>([]);
+  const esclusiHydrated = useRef(false);
+
+  // Chi è escluso dai giochi resta memorizzato (per dispositivo).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("assenzio-esclusi");
+      if (raw) setEsclusi(JSON.parse(raw));
+    } catch {
+      /* pazienza */
+    }
+    esclusiHydrated.current = true;
+  }, []);
+  useEffect(() => {
+    if (!esclusiHydrated.current) return;
+    try {
+      localStorage.setItem("assenzio-esclusi", JSON.stringify(esclusi));
+    } catch {
+      /* pazienza */
+    }
+  }, [esclusi]);
 
   const notify = (msg: string) => {
     const id = ++toastId.current;
@@ -99,9 +120,19 @@ export default function Home() {
     }
   };
 
-  // Il contabar basta un giocatore; i giochi ne vogliono almeno due.
+  const toggleEscluso = (nome: string) =>
+    setEsclusi((prev) =>
+      prev.includes(nome) ? prev.filter((n) => n !== nome) : [...prev, nome],
+    );
+
+  const attivi = players.filter((p) => !esclusi.includes(p));
+  // Contabar e Taverna riguardano tutta la cumitiva; i giochi solo chi gioca.
+  const usaTutti = mode === "contabar" || mode === "taverna";
+  const partecipanti = usaTutti ? players : attivi;
+  const mostraPartecipanti = !usaTutti && players.length >= 2;
   const needed = mode === "contabar" ? 1 : 2;
-  const enough = players.length >= needed;
+  const enough = partecipanti.length >= needed;
+  const troppiEsclusi = !usaTutti && players.length >= 2 && attivi.length < 2;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center gap-8 px-4 py-8 sm:py-12">
@@ -212,9 +243,45 @@ export default function Home() {
         {MODES.find((m) => m.id === mode)?.desc}
       </p>
 
+      {/* ── Chi gioca (esclude/reintegra per i giochi) ── */}
+      {mostraPartecipanti && (
+        <section className="w-full">
+          <p className="mb-2 text-center font-[family-name:var(--font-titolo)] text-sm tracking-[0.3em] text-ottone-chiaro">
+            CHI GIOCA? {attivi.length}/{players.length}
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {players.map((p) => {
+              const dentro = !esclusi.includes(p);
+              return (
+                <button
+                  key={p}
+                  onClick={() => toggleEscluso(p)}
+                  className={`rounded-full border px-4 py-1 text-lg transition-all ${
+                    dentro
+                      ? "border-assenzio bg-smeraldo/50 text-assenzio-pallido"
+                      : "border-ottone/30 text-etichetta-scura/60 line-through"
+                  }`}
+                  title={dentro ? "Tocca pe' escludere" : "Tocca pe' fà rientrà"}
+                >
+                  {dentro ? p : `${p} 💤`}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* ── Il gioco ── */}
       <section className="w-full">
-        {!enough ? (
+        {troppiEsclusi ? (
+          <div className="etichetta mx-auto max-w-md rounded-sm p-8 text-center">
+            <p className="animate-float text-5xl">💤</p>
+            <p className="mt-4 text-xl italic text-etichetta">
+              Hê escluso troppa gente! Ce vonno almeno duje pe&rsquo; giocà —
+              fà rientrà quaccheduno. 🎮
+            </p>
+          </div>
+        ) : !enough ? (
           <div className="etichetta mx-auto max-w-md rounded-sm p-8 text-center">
             <p className="animate-float text-5xl">🧚</p>
             <p className="mt-4 text-xl italic text-etichetta">
@@ -226,24 +293,26 @@ export default function Home() {
         ) : (
           <>
             {mode === "classico" && (
-              <SingleSpin players={players} variant="classico" />
+              <SingleSpin players={partecipanti} variant="classico" />
             )}
-            {mode === "duello" && <Duello players={players} notify={notify} />}
+            {mode === "duello" && (
+              <Duello players={partecipanti} notify={notify} />
+            )}
             {mode === "eliminazione" && (
-              <Eliminazione players={players} notify={notify} />
+              <Eliminazione players={partecipanti} notify={notify} />
             )}
             {mode === "chipaga" && (
-              <SingleSpin players={players} variant="chipaga" />
+              <SingleSpin players={partecipanti} variant="chipaga" />
             )}
             {mode === "squadre" && (
-              <Squadre players={players} notify={notify} />
+              <Squadre players={partecipanti} notify={notify} />
             )}
-            {mode === "ordine" && <Ordine players={players} />}
+            {mode === "ordine" && <Ordine players={partecipanti} />}
             {mode === "mine" && (
-              <CampoMinato players={players} notify={notify} />
+              <CampoMinato players={partecipanti} notify={notify} />
             )}
             {mode === "pallini" && (
-              <Pallini players={players} notify={notify} />
+              <Pallini players={partecipanti} notify={notify} />
             )}
             {mode === "contabar" && (
               <Contabar players={players} notify={notify} />

@@ -22,6 +22,13 @@ gli amici, al mare, per i giochi da tavolo e per i giochi alcolici.
 | 👥 **Squadre** | Divide la comitiva in 2–4 squadre con nomi a tema assenzio. |
 | 🎲 **Ordine** | Sorteggia l'ordine di gioco: chi comincia e chi arriva urdemo… comme sempe. |
 
+## Chi gioca 🎮
+
+Sopra ogni gioco c'è il selettore **"Chi gioca?"**: tocca un nome per farlo
+**sedere fuori** da quel giro (es. chi guida o non beve) senza toglierlo dalla
+cumitiva. Vale per tutti i giochi (ruota, campo minato, pallini, squadre…); il
+**Contabar** invece conta sempre le bevute di tutti. La scelta resta memorizzata.
+
 ## Easter egg 🧚
 
 Non li elenchiamo tutti (sennò che easter egg sono), ma qualche indizio:
