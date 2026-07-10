@@ -4,6 +4,7 @@
 // porta con sé la sua gradazione e il conto in unità alcoliche.
 
 import { uaById } from "./drinks";
+import { Scusa } from "./scuse";
 
 export type PlayerCount = Record<string, number>; // drinkId -> quantità
 export type Counts = Record<string, PlayerCount>;
@@ -14,6 +15,7 @@ export type Serata = {
   date: string;
   counts: Counts;
   log?: LogEvent[];
+  scuse?: Scusa[]; // l'albo delle scuse di quella serata
 };
 
 const KEY = "assenzio-bar";
