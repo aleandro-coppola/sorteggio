@@ -12,6 +12,7 @@ import Pallini from "@/components/modes/Pallini";
 import Contabar from "@/components/modes/Contabar";
 import Taverna from "@/components/modes/Taverna";
 import Carte from "@/components/modes/Carte";
+import Scuse from "@/components/modes/Scuse";
 import SoundToggle from "@/components/SoundToggle";
 import SessionBar from "@/components/SessionBar";
 import { useSession } from "@/components/SessionProvider";
@@ -36,6 +37,7 @@ const MODES = [
   { id: "contabar", label: "Contabar", icon: "🍺", desc: "Conta 'e bevute" },
   { id: "taverna", label: "Taverna", icon: "🛡️", desc: "GDR napulitano" },
   { id: "carte", label: "Carte", icon: "♠️", desc: "'A carta cchiù auta vince" },
+  { id: "scuse", label: "Scuse", icon: "📋", desc: "L'albo d''e scuse" },
 ] as const;
 
 type ModeId = (typeof MODES)[number]["id"];
@@ -135,10 +137,11 @@ export default function Home() {
     [players, esclusi],
   );
   // Contabar e Taverna riguardano tutta la cumitiva; i giochi solo chi gioca.
-  const usaTutti = mode === "contabar" || mode === "taverna";
+  const usaTutti =
+    mode === "contabar" || mode === "taverna" || mode === "scuse";
   const partecipanti = usaTutti ? players : attivi;
   const mostraPartecipanti = !usaTutti && players.length >= 2;
-  const needed = mode === "contabar" ? 1 : 2;
+  const needed = mode === "contabar" || mode === "scuse" ? 1 : 2;
   const enough = partecipanti.length >= needed;
   const troppiEsclusi = !usaTutti && players.length >= 2 && attivi.length < 2;
 
@@ -328,6 +331,9 @@ export default function Home() {
             )}
             {mode === "taverna" && (
               <Taverna players={players} notify={notify} />
+            )}
+            {mode === "scuse" && (
+              <Scuse players={players} notify={notify} />
             )}
           </>
         )}

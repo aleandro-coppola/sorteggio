@@ -30,9 +30,11 @@ import {
 } from "firebase/firestore";
 import { cloudConfigured, getDb } from "@/lib/firebase";
 import { Serata } from "@/lib/bar";
+import { Scusa } from "@/lib/scuse";
 
 const PLAYERS_KEY = "assenzio-giocatori";
 const BAR_KEY = "assenzio-bar";
+const SCUSE_KEY = "assenzio-scuse";
 const SESSION_KEY = "assenzio-sessione";
 
 export type SessionStatus = "local" | "joining" | "connected" | "error";
@@ -42,6 +44,8 @@ type Ctx = {
   setPlayers: Dispatch<SetStateAction<string[]>>;
   serate: Serata[];
   setSerate: Dispatch<SetStateAction<Serata[]>>;
+  scuse: Scusa[];
+  setScuse: Dispatch<SetStateAction<Scusa[]>>;
   sessionCode: string | null;
   status: SessionStatus;
   error: string | null;
@@ -83,6 +87,7 @@ const toUpdater = <T,>(action: SetStateAction<T>): ((prev: T) => T) =>
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [players, setPlayersState] = useState<string[]>([]);
   const [serate, setSerateState] = useState<Serata[]>([]);
+  const [scuse, setScuseState] = useState<Scusa[]>([]);
   const [sessionCode, setSessionCode] = useState<string | null>(null);
   const [status, setStatus] = useState<SessionStatus>("local");
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +112,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const data = snap.data();
         setPlayersState(Array.isArray(data.players) ? data.players : []);
         setSerateState(Array.isArray(data.serate) ? data.serate : []);
+        setScuseState(Array.isArray(data.scuse) ? data.scuse : []);
         setStatus("connected");
       },
       () => setStatus("error"),
@@ -115,7 +121,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   // Applica un aggiornamento al cloud in modo atomico (transazione).
   function commitField(
-    field: "players" | "serate",
+    field: "players" | "serate" | "scuse",
     updater: (cur: unknown[]) => unknown[],
   ) {
     const code = codeRef.current;
@@ -154,10 +160,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const setScuse: Dispatch<SetStateAction<Scusa[]>> = (action) => {
+    const updater = toUpdater(action);
+    setScuseState(updater);
+    if (codeRef.current) {
+      commitField("scuse", (cur) => updater(cur as Scusa[]));
+    }
+  };
+
   // Avvio: carica il locale e, se c'era una sessione, riconnettiti.
   useEffect(() => {
     setPlayersState(readLocal<string[]>(PLAYERS_KEY, []));
     setSerateState(readLocal<Serata[]>(BAR_KEY, []));
+    setScuseState(readLocal<Scusa[]>(SCUSE_KEY, []));
     let savedCode: string | null = null;
     try {
       savedCode = localStorage.getItem(SESSION_KEY);
@@ -181,10 +196,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(PLAYERS_KEY, JSON.stringify(players));
       localStorage.setItem(BAR_KEY, JSON.stringify(serate));
+      localStorage.setItem(SCUSE_KEY, JSON.stringify(scuse));
     } catch {
       /* pazienza */
     }
-  }, [players, serate, sessionCode]);
+  }, [players, serate, scuse, sessionCode]);
 
   async function join(codeRaw: string, password: string): Promise<boolean> {
     const code = codeRaw.trim().toLowerCase().replace(/\s+/g, "-");
@@ -216,6 +232,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           pass: hash,
           players,
           serate,
+          scuse,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
@@ -251,6 +268,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // Torna ai dati locali salvati prima della sessione.
     setPlayersState(readLocal<string[]>(PLAYERS_KEY, []));
     setSerateState(readLocal<Serata[]>(BAR_KEY, []));
+    setScuseState(readLocal<Scusa[]>(SCUSE_KEY, []));
   }
 
   return (
@@ -260,6 +278,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setPlayers,
         serate,
         setSerate,
+        scuse,
+        setScuse,
         sessionCode,
         status,
         error,
