@@ -15,6 +15,7 @@ gli amici, al mare, per i giochi da tavolo e per i giochi alcolici.
 | ⚔️ **Duello** | Due sfidanti, al meglio di 3 o di 5. Tabellone punti e sfottò finale per chi perde. |
 | 💀 **Eliminazione** | Ogni giro elimina qualcuno: l'ultimo che resta è il campione. |
 | 🍻 **Chi Paga?** | Per i giochi alcolici: la ruota decide chi paga (o chi beve). |
+| 🥃 **Shot Minato** | Campo minato **10×10** in versione alcolica. La ruota decide l'ordine, poi si scava: **3 bombe** (game over), **12 shot** (4 vodka, 4 gin, 4 assenzio — chi la trova beve), **2 malus** (offri uno shot / offri un drink), **2 bonus** (uno shot/drink offerto a te) e i **jolly** = immunità che il giocatore tiene e decide quando usare, per saltare uno shot o un malus. |
 | 💣 **Campo Minato** | La ruota decide l'ordine dei tap, poi si scava su una griglia 3×3–6×6: bomba = game over, jolly = immunità, malus "clicca due volte", bonus "salta il giro" e tessera che inverte il giro. Se il jolly ti salva, la bomba si riarma altrove. |
 | 🔮 **Pallini** | Un contenitore (bicchiere, bottiglia o caraffa) pieno di pallini: ognuno stima quanti sono, si preme **Verifica** e chi va più vicino vince. Tre livelli di difficoltà; chi sbaglia di più si becca lo sfottò. |
 | 📋 **Scuse** | L'albo delle scuse: per ogni membro segni la giustificazione con cui si è scansato la bevuta (es. *«il tropical vodka è troppo dolce, mi piglio una Red Bull»*) e le dai un **voto da 1 a 10**. Tabella Chi · Scusa · Voto con statistiche (voto medio, miglior scusa, "re d''e scuse"). Condiviso in tempo reale nella sessione. |

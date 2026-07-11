@@ -14,6 +14,7 @@ import Taverna from "@/components/modes/Taverna";
 import Carte from "@/components/modes/Carte";
 import Scuse from "@/components/modes/Scuse";
 import Poker from "@/components/modes/Poker";
+import CampoShot from "@/components/modes/CampoShot";
 import SoundToggle from "@/components/SoundToggle";
 import SessionBar from "@/components/SessionBar";
 import { useSession } from "@/components/SessionProvider";
@@ -40,6 +41,7 @@ const MODES = [
   { id: "carte", label: "Carte", icon: "♠️", desc: "'A carta cchiù auta vince" },
   { id: "scuse", label: "Scuse", icon: "📋", desc: "L'albo d''e scuse" },
   { id: "poker", label: "Poker", icon: "🃏", desc: "Poker penitenza (max 4)" },
+  { id: "camposhot", label: "Shot Minato", icon: "🥃", desc: "Campo 10×10 cu shot" },
 ] as const;
 
 type ModeId = (typeof MODES)[number]["id"];
@@ -325,6 +327,7 @@ export default function Home() {
             {mode === "poker" && (
               <Poker players={partecipanti} notify={notify} />
             )}
+            {mode === "camposhot" && <CampoShot players={partecipanti} />}
             {mode === "mine" && (
               <CampoMinato players={partecipanti} notify={notify} />
             )}
