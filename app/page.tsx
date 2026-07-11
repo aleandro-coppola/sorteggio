@@ -41,7 +41,7 @@ const MODES = [
   { id: "carte", label: "Carte", icon: "♠️", desc: "'A carta cchiù auta vince" },
   { id: "scuse", label: "Scuse", icon: "📋", desc: "L'albo d''e scuse" },
   { id: "poker", label: "Poker", icon: "🃏", desc: "Poker penitenza (max 4)" },
-  { id: "camposhot", label: "Shot Minato", icon: "🥃", desc: "Campo 10×10 cu shot" },
+  { id: "camposhot", label: "Shot Minato", icon: "🥃", desc: "Shot, box e rischi" },
 ] as const;
 
 type ModeId = (typeof MODES)[number]["id"];
