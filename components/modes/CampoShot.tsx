@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Wheel from "@/components/Wheel";
 import { pick, shuffle } from "@/lib/phrases";
 import { playCheers, playFail, playJolly, playPop } from "@/lib/sound";
 
 // Campo alcolico 10×10 (senza bombe): shot diretti, "box chiuso" (roulette e a
-// scelta), "rischio bevuta" (al 2° tutti bevono) e i jolly = immunità (max 4).
-// La numerazione delle tessere scala col numero dei membri.
+// scelta), "rischio bevuta" (al 2° tutti bevono), "specchio" (copi l'urdemo
+// shot), "salute" (tutti bevono subito), "meno fesso" (beve chi ne tene meno)
+// e i jolly = immunità (max 4). Tutto resta in memoria: se cambi gioco e torni,
+// ritrovi 'a partita. 'O tasto RESET ricomincia da capo.
 
 type Contenuto =
   | "vuoto"
@@ -17,7 +19,10 @@ type Contenuto =
   | "assenzio"
   | "box-roulette"
   | "box-scelta"
-  | "rischio";
+  | "rischio"
+  | "specchio"
+  | "salute"
+  | "meno-fesso";
 
 type Tessera = { contenuto: Contenuto; scoperta: boolean };
 type Fase = "ordine" | "gioco";
@@ -31,6 +36,9 @@ const EMOJI: Record<Contenuto, string> = {
   "box-roulette": "🎰",
   "box-scelta": "📦",
   rischio: "⚠️",
+  specchio: "🪞",
+  salute: "🥂",
+  "meno-fesso": "🎯",
 };
 
 const FRASI_VUOTO_SHOT = [
@@ -51,6 +59,9 @@ function creaGriglia(n: number): Tessera[] {
     ...Array<Contenuto>(3).fill("box-roulette"),
     ...Array<Contenuto>(2).fill("box-scelta"),
     ...Array<Contenuto>(6).fill("rischio"),
+    ...Array<Contenuto>(3).fill("specchio"),
+    ...Array<Contenuto>(2).fill("salute"),
+    ...Array<Contenuto>(3).fill("meno-fesso"),
     ...Array<Contenuto>(4).fill("jolly"), // solo 4 jolly totali
   ];
   while (contenuti.length < 100) contenuti.push("vuoto");
@@ -59,35 +70,113 @@ function creaGriglia(n: number): Tessera[] {
 
 type Bevuta = { chi: string; quante: number; emoji: string; titolo: string };
 type Scelta = { cells: boolean[]; claimed: (string | null)[]; pickerIdx: number };
+type TuttiBevono = { titolo: string; testo: string; emoji: string };
+
+// ── Persistenza ──
+const STORAGE_KEY = "assenzio-camposhot";
+
+type SavedState = {
+  players: string[];
+  fase: Fase;
+  ordine: string[];
+  daSorteggiare: string[];
+  griglia: Tessera[];
+  turno: number;
+  immunita: Record<string, number>;
+  rischioCount: number;
+  shotBevuti: Record<string, number>;
+  ultimoShot: number;
+};
+
+function loadSaved(): SavedState | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as SavedState) : null;
+  } catch {
+    return null;
+  }
+}
+
+function samePlayers(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((x, i) => x === b[i]);
+}
 
 export default function CampoShot({ players }: { players: string[] }) {
-  const [fase, setFase] = useState<Fase>("ordine");
-  const [ordine, setOrdine] = useState<string[]>([]);
-  const [daSorteggiare, setDaSorteggiare] = useState<string[]>(players);
-  const [griglia, setGriglia] = useState<Tessera[]>([]);
-  const [turno, setTurno] = useState(0);
-  const [immunita, setImmunita] = useState<Record<string, number>>({});
-  const [rischioCount, setRischioCount] = useState(0);
+  // Ripristino una tantum: se in memoria c'è una partita con gli stessi
+  // giocatori, la riprendo; sennò parto da zero.
+  const savedRef = useRef<SavedState | null | undefined>(undefined);
+  if (savedRef.current === undefined) {
+    const s = loadSaved();
+    savedRef.current = s && samePlayers(s.players, players) ? s : null;
+  }
+  const saved = savedRef.current;
+
+  const [fase, setFase] = useState<Fase>(saved?.fase ?? "ordine");
+  const [ordine, setOrdine] = useState<string[]>(saved?.ordine ?? []);
+  const [daSorteggiare, setDaSorteggiare] = useState<string[]>(
+    saved?.daSorteggiare ?? players,
+  );
+  const [griglia, setGriglia] = useState<Tessera[]>(saved?.griglia ?? []);
+  const [turno, setTurno] = useState(saved?.turno ?? 0);
+  const [immunita, setImmunita] = useState<Record<string, number>>(
+    saved?.immunita ?? {},
+  );
+  const [rischioCount, setRischioCount] = useState(saved?.rischioCount ?? 0);
+  const [shotBevuti, setShotBevuti] = useState<Record<string, number>>(
+    saved?.shotBevuti ?? {},
+  );
+  const [ultimoShot, setUltimoShot] = useState(saved?.ultimoShot ?? 1);
   const [evento, setEvento] = useState<string | null>(null);
 
-  // Modali
+  // Modali (transitori, non si salvano)
   const [bevuta, setBevuta] = useState<Bevuta | null>(null);
   const [roulette, setRoulette] = useState<string | null>(null); // chi ha aperto
   const [scelta, setScelta] = useState<Scelta | null>(null);
-  const [rischioTutti, setRischioTutti] = useState(false);
+  const [tuttiBevono, setTuttiBevono] = useState<TuttiBevono | null>(null);
 
+  // Salva a ogni cambiamento del cuore della partita.
   useEffect(() => {
-    setFase("ordine");
-    setOrdine([]);
-    setDaSorteggiare(players);
-    setGriglia([]);
-    setImmunita({});
-    setRischioCount(0);
-    setEvento(null);
-    setBevuta(null);
-    setRoulette(null);
-    setScelta(null);
-    setRischioTutti(false);
+    if (typeof window === "undefined") return;
+    const state: SavedState = {
+      players,
+      fase,
+      ordine,
+      daSorteggiare,
+      griglia,
+      turno,
+      immunita,
+      rischioCount,
+      shotBevuti,
+      ultimoShot,
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      /* memoria piena o negata: pazienza */
+    }
+  }, [
+    players,
+    fase,
+    ordine,
+    daSorteggiare,
+    griglia,
+    turno,
+    immunita,
+    rischioCount,
+    shotBevuti,
+    ultimoShot,
+  ]);
+
+  // Se cambia davvero la lista dei giocatori (non al semplice rientro), reset.
+  const primaMount = useRef(true);
+  useEffect(() => {
+    if (primaMount.current) {
+      primaMount.current = false;
+      return;
+    }
+    reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [players]);
 
   const avvia = (ordineFinale: string[]) => {
@@ -96,6 +185,8 @@ export default function CampoShot({ players }: { players: string[] }) {
     setTurno(0);
     setImmunita({});
     setRischioCount(0);
+    setShotBevuti({});
+    setUltimoShot(1);
     setEvento(null);
     setFase("gioco");
   };
@@ -120,9 +211,9 @@ export default function CampoShot({ players }: { players: string[] }) {
     setBevuta(null);
     setRoulette(null);
     setScelta(null);
-    setRischioTutti(false);
+    setTuttiBevono(null);
   };
-  const bloccato = !!bevuta || !!roulette || !!scelta || rischioTutti;
+  const bloccato = !!bevuta || !!roulette || !!scelta || !!tuttiBevono;
 
   const scopri = (i: number) => {
     if (fase !== "gioco" || griglia[i].scoperta || bloccato) return;
@@ -154,6 +245,42 @@ export default function CampoShot({ players }: { players: string[] }) {
       });
       return;
     }
+    if (c === "specchio") {
+      // Copi 'a sorte dell'ultimo shot risolto (min 1).
+      const q = Math.max(1, ultimoShot);
+      playCheers();
+      setBevuta({
+        chi: nome,
+        quante: q,
+        emoji: "🪞",
+        titolo: "SPECCHIO — COMME L'URDEMO",
+      });
+      return;
+    }
+    if (c === "salute") {
+      playCheers();
+      setTuttiBevono({
+        titolo: "SALUTE! — TUTTI BEVONO",
+        testo: "Brindisi 'e comitiva: TUTTA 'A TAVULA se fa nu shot 'nzieme! 🥂",
+        emoji: "🥂",
+      });
+      return;
+    }
+    if (c === "meno-fesso") {
+      // Beve chi tene meno shot fino a mo' (a parità, sorteggio).
+      const conteggi = ordine.map((p) => shotBevuti[p] ?? 0);
+      const min = Math.min(...conteggi);
+      const candidati = ordine.filter((p) => (shotBevuti[p] ?? 0) === min);
+      const chi = pick(candidati);
+      playCheers();
+      setBevuta({
+        chi,
+        quante: 1,
+        emoji: "🎯",
+        titolo: `${chi.toUpperCase()} È 'O CCHIÙ SOBRIO`,
+      });
+      return;
+    }
     if (c === "box-roulette") {
       playPop();
       setRoulette(nome);
@@ -175,7 +302,12 @@ export default function CampoShot({ players }: { players: string[] }) {
       if (nuovo >= 2) {
         setRischioCount(0);
         playFail();
-        setRischioTutti(true); // tutti bevono → modale
+        setTuttiBevono({
+          titolo: "RISCHIO ×2 — TUTTI BEVONO!",
+          testo:
+            "È asciuto 'o secondo rischio: TUTTA 'A TAVULA se fa nu shot! 🥃",
+          emoji: "⚠️",
+        });
       } else {
         setRischioCount(nuovo);
         setEvento("⚠️ Rischio bevuta! (1 su 2) 'O prossimo ca 'o trova… 💀");
@@ -228,7 +360,14 @@ export default function CampoShot({ players }: { players: string[] }) {
     }
   };
 
-  const bevutaFatta = () => avanza();
+  const bevutaFatta = () => {
+    if (bevuta) {
+      const { chi, quante } = bevuta;
+      setShotBevuti((s) => ({ ...s, [chi]: (s[chi] ?? 0) + quante }));
+      setUltimoShot(quante);
+    }
+    avanza();
+  };
   const bevutaJolly = () => {
     if (!bevuta) return;
     setImmunita((prev) => ({
@@ -240,18 +379,33 @@ export default function CampoShot({ players }: { players: string[] }) {
     avanza();
   };
 
+  const tuttiFatto = () => {
+    setShotBevuti((s) => {
+      const n = { ...s };
+      ordine.forEach((p) => {
+        n[p] = (n[p] ?? 0) + 1;
+      });
+      return n;
+    });
+    setUltimoShot(1);
+    avanza();
+  };
+
   const reset = () => {
     setFase("ordine");
     setOrdine([]);
     setDaSorteggiare(players);
     setGriglia([]);
+    setTurno(0);
     setImmunita({});
     setRischioCount(0);
+    setShotBevuti({});
+    setUltimoShot(1);
     setEvento(null);
     setBevuta(null);
     setRoulette(null);
     setScelta(null);
-    setRischioTutti(false);
+    setTuttiBevono(null);
   };
 
   return (
@@ -262,8 +416,9 @@ export default function CampoShot({ players }: { players: string[] }) {
           <p className="max-w-lg text-center text-lg italic text-etichetta-scura">
             &rsquo;A rota decide l&rsquo;ordine, po&rsquo; se scava &rsquo;o
             campo 10×10: 🥃 shot diretti, 🎰 box roulette, 📦 box a scelta,
-            ⚠️ rischio bevuta (ô 2° tutti bevono), 🃏 jolly = immunità (ne
-            stanno sulo 4!).
+            ⚠️ rischio bevuta (ô 2° tutti bevono), 🪞 specchio (copi l&rsquo;urdemo
+            shot), 🥂 salute (tutti bevono), 🎯 &rsquo;o meno fesso (beve chi ne
+            tene meno), 🃏 jolly = immunità (ne stanno sulo 4!).
           </p>
           {ordine.length > 0 && (
             <div className="flex max-w-lg flex-wrap justify-center gap-2">
@@ -305,6 +460,7 @@ export default function CampoShot({ players }: { players: string[] }) {
                 }`}
               >
                 {n}
+                {(shotBevuti[n] ?? 0) > 0 && ` 🥃${shotBevuti[n]}`}
                 {(immunita[n] ?? 0) > 0 && ` 🃏×${immunita[n]}`}
               </span>
             ))}
@@ -363,12 +519,12 @@ export default function CampoShot({ players }: { players: string[] }) {
             onClick={reset}
             className="rounded-sm border border-ottone/60 px-5 py-2 font-[family-name:var(--font-titolo)] text-sm tracking-widest text-ottone-chiaro transition-all hover:scale-105 hover:bg-ottone/15"
           >
-            ↺ RICOMINCIA
+            ↺ RESET
           </button>
         </>
       )}
 
-      {/* ── Modale bevuta (shot diretto / esiti box) ── */}
+      {/* ── Modale bevuta (shot diretto / esiti box / specchio / meno fesso) ── */}
       {bevuta && (
         <Modale>
           <p className="text-5xl">{bevuta.emoji}</p>
@@ -451,23 +607,27 @@ export default function CampoShot({ players }: { players: string[] }) {
         </Modale>
       )}
 
-      {/* ── Modale rischio: tutti bevono ── */}
-      {rischioTutti && (
+      {/* ── Modale "tutti bevono" (rischio ×2 / salute) ── */}
+      {tuttiBevono && (
         <Modale>
-          <p className="text-5xl">⚠️</p>
-          <p className="mt-2 font-[family-name:var(--font-titolo)] text-2xl font-bold text-red-400">
-            RISCHIO ×2 — TUTTI BEVONO!
+          <p className="text-5xl">{tuttiBevono.emoji}</p>
+          <p
+            className={`mt-2 font-[family-name:var(--font-titolo)] text-2xl font-bold ${
+              tuttiBevono.emoji === "⚠️" ? "text-red-400" : "text-ottone-chiaro"
+            }`}
+          >
+            {tuttiBevono.titolo}
           </p>
           <div className="divisorio-oro my-3" />
           <p className="text-lg italic text-etichetta">
-            È asciuto 'o secondo rischio: TUTTA 'A TAVULA se fa nu shot! 🥃
+            {tuttiBevono.testo}
             <br />
             <span className="text-base text-etichetta-scura">
               (chi tene 'o jolly po' skippà)
             </span>
           </p>
           <div className="divisorio-oro my-4" />
-          <button onClick={avanza} className={btnPrimario}>
+          <button onClick={tuttiFatto} className={btnPrimario}>
             ✔ FATTO — S'È BEVUTO
           </button>
         </Modale>
